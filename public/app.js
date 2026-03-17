@@ -186,6 +186,18 @@ function renderDashboardCharts(r) {
       hourly[h].input += u.input_tokens;
       hourly[h].output += u.output_tokens;
     });
+    // Fill in missing days with zero-value entries (one entry per day at 00:00)
+    if (r.period) {
+      const start = new Date(r.period.start); start.setUTCHours(0,0,0,0);
+      const end = new Date(r.period.end); end.setUTCHours(0,0,0,0);
+      for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+        const dayKey = d.toISOString().slice(0, 10);
+        const hasDayData = Object.keys(hourly).some(h => h.startsWith(dayKey));
+        if (!hasDayData) {
+          hourly[dayKey + 'T00:00:00Z'] = { input: 0, output: 0 };
+        }
+      }
+    }
     const hours = Object.keys(hourly).sort();
     charts.timeline = new Chart($('#ch-timeline'), {
       type: 'bar', data: {
@@ -427,6 +439,15 @@ function renderTimeline() {
     byDayProvider[pk].requests += u.requests;
   });
 
+  // Fill in missing days so the full period is represented
+  if (r.period) {
+    const start = new Date(r.period.start); start.setUTCHours(0,0,0,0);
+    const end = new Date(r.period.end); end.setUTCHours(0,0,0,0);
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+      const dayKey = d.toISOString().slice(0, 10);
+      if (!byDay[dayKey]) byDay[dayKey] = { input: 0, output: 0, requests: 0, hours: new Set() };
+    }
+  }
   const days = Object.keys(byDay).sort();
   const peakDay = days.reduce((best, d) => byDay[d].input > (byDay[best]?.input || 0) ? d : best, days[0]);
   const avgDaily = days.length ? Math.round(days.reduce((s,d) => s + byDay[d].requests, 0) / days.length) : 0;
