@@ -82,8 +82,8 @@ function collectUsageData(sessions, cutoff) {
       const created = m.time?.created;
       if (!created || created < cutoff) continue;
 
-      const provider = m.model?.providerID || 'unknown';
-      const model = m.model?.modelID || 'unknown';
+      const provider = m.providerID || m.model?.providerID || 'unknown';
+      const model = m.modelID || m.model?.modelID || 'unknown';
       const inputTokens = m.tokens?.input || 0;
       const outputTokens = m.tokens?.output || 0;
 
