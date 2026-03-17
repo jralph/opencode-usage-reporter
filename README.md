@@ -1,25 +1,41 @@
 # OpenCode Usage Reporter
 
-A zero-dependency Node.js CLI that reads your local [OpenCode](https://github.com/opencode-ai/opencode) session data and generates token usage reports broken down by provider and model.
+A Node.js CLI that reads your local [OpenCode](https://github.com/opencode-ai/opencode) session data and generates token usage reports broken down by provider, model, and tool.
 
 Useful for understanding how many tokens you're consuming and comparing costs between GitHub Copilot subscriptions vs direct API usage.
+
+## Install
+
+```bash
+npm install -g opencode-usage-reporter
+```
+
+Or run directly with npx:
+
+```bash
+npx opencode-usage-reporter --days 7
+```
 
 ## Requirements
 
 - Node.js 18+
-- OpenCode installed with session data in `~/.local/share/opencode/storage/`
+- `sqlite3` CLI (for reading newer OpenCode databases)
+- OpenCode installed with data in `~/.local/share/opencode/`
 
 ## Usage
 
 ```bash
 # Hourly breakdown for the last 7 days (stdout)
-node report-opencode-usage.js --days 7
+opencode-usage --days 7
+
+# Summary only (totals + per-model + per-tool, no hourly rows)
+opencode-usage --days 7 --summary-only
 
 # Save to file
-node report-opencode-usage.js --days 7 --output report.json
+opencode-usage --days 7 --output report.json
 
 # Session-level breakdown for the last 30 days
-node report-opencode-usage.js --days 30 --report sessions --output report.json
+opencode-usage --days 30 --report sessions --output report.json
 ```
 
 ### Options
@@ -29,13 +45,14 @@ node report-opencode-usage.js --days 30 --report sessions --output report.json
 | `--days <n>` | `7` | Number of days to include |
 | `--report <type>` | `hours` | Report type: `hours` or `sessions` |
 | `--output <file>` | stdout | Write JSON to file instead of stdout |
+| `--summary-only` | | Only output totals, model breakdowns, and tool stats |
 | `--help` | | Show help |
 
 ## Output Format
 
 ### Hourly Report (`--report hours`)
 
-Aggregates token usage into hourly buckets per provider/model combination:
+Aggregates token usage into hourly buckets per provider/model combination, with per-tool breakdowns:
 
 ```json
 {
@@ -47,18 +64,42 @@ Aggregates token usage into hourly buckets per provider/model combination:
   },
   "generated_at": "2026-03-17T16:20:00.000Z",
   "totals": {
-    "input_tokens": 584210,
-    "output_tokens": 42300,
-    "requests": 312
+    "input_tokens": 201576698,
+    "output_tokens": 914609,
+    "estimated_tokens": 86214,
+    "tool_input_tokens": 5132699,
+    "requests": 2903
   },
+  "model_totals": [
+    {
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
+      "input_tokens": 15916071,
+      "output_tokens": 307305,
+      "estimated_tokens": 6748,
+      "tool_input_tokens": 1471645,
+      "requests": 528
+    }
+  ],
+  "tool_totals": [
+    { "tool": "read", "calls": 969, "input_tokens": 3554131, "output_tokens": 0 },
+    { "tool": "bash", "calls": 922, "input_tokens": 642947, "output_tokens": 0 },
+    { "tool": "edit", "calls": 767, "input_tokens": 219893, "output_tokens": 0 }
+  ],
   "usage": [
     {
-      "hour": "2026-03-10T15:00:00Z",
-      "provider": "github",
-      "model": "claude-sonnet-4",
+      "hour": "2026-03-15T10:00:00Z",
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
       "input_tokens": 12320,
       "output_tokens": 5030,
-      "requests": 8
+      "estimated_tokens": 0,
+      "tool_input_tokens": 3200,
+      "requests": 8,
+      "tools": {
+        "read": { "calls": 3, "input_tokens": 2100 },
+        "bash": { "calls": 2, "input_tokens": 1100 }
+      }
     }
   ]
 }
@@ -72,12 +113,9 @@ Breaks down usage per session/provider/model:
 {
   "report_type": "sessions",
   "period": { "start": "...", "end": "...", "days": 30 },
-  "generated_at": "2026-03-17T16:20:00.000Z",
-  "totals": {
-    "input_tokens": 1200000,
-    "output_tokens": 98000,
-    "requests": 842
-  },
+  "totals": { "...": "same as hourly" },
+  "model_totals": [ "..." ],
+  "tool_totals": [ "..." ],
   "sessions": [
     {
       "session_id": "abc123",
@@ -85,10 +123,12 @@ Breaks down usage per session/provider/model:
       "directory": "/home/user/project",
       "started_at": "2026-03-15T09:00:00.000Z",
       "ended_at": "2026-03-15T09:45:00.000Z",
-      "provider": "github",
-      "model": "claude-sonnet-4",
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
       "input_tokens": 45000,
       "output_tokens": 3200,
+      "estimated_tokens": 0,
+      "tool_input_tokens": 12000,
       "requests": 15
     }
   ]
@@ -99,17 +139,19 @@ Breaks down usage per session/provider/model:
 
 | Field | Description |
 |-------|-------------|
-| `provider` | The provider configured in OpenCode (e.g. `github`, `anthropic`, `openai`) |
+| `provider` | The provider configured in OpenCode (e.g. `github-copilot`, `anthropic`, `openai`) |
 | `model` | The model ID as configured in OpenCode |
 | `input_tokens` | Tokens sent to the model (prompts, context, tool results) |
 | `output_tokens` | Tokens generated by the model (responses, tool calls) |
+| `estimated_tokens` | Subset of input/output tokens that were estimated via tokenizer (not reported by the API) |
+| `tool_input_tokens` | Tokens from tool call inputs (e.g. file reads, bash commands) — estimated via Claude's tokenizer |
 | `requests` | Number of individual API requests made |
 
 ## How It Works
 
-OpenCode stores all session and message data locally in `~/.local/share/opencode/storage/`. This tool reads that data directly — no API keys or network access required.
+OpenCode stores session and message data locally in `~/.local/share/opencode/`. Newer versions use a SQLite database (`opencode.db`), older versions use JSON files in `storage/`. This tool auto-detects and reads from both sources.
 
-Each message in OpenCode records the provider, model, token counts, and timestamps. The reporter scans all messages within your specified time range and aggregates them.
+Each message records the provider, model, token counts, and timestamps. For messages missing token counts (e.g. user messages), the tool estimates them using Anthropic's Claude tokenizer. Tool call inputs/outputs are also tokenized to give accurate `tool_input_tokens` counts.
 
 ## License
 
