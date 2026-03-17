@@ -136,7 +136,7 @@ function loadDBData(cutoff) {
   if (msgIds.length === 0) return;
 
   const partRaw = dbQueryRaw(
-    `SELECT message_id || '${FIELD_SEP}' || data || '${ROW_SEP}' FROM part WHERE message_id IN (${msgIds.map(id => "'" + id + "'").join(',')})`
+    `SELECT p.message_id || '${FIELD_SEP}' || p.data || '${ROW_SEP}' FROM part p INNER JOIN message m ON p.message_id = m.id WHERE m.time_created >= ${cutoff}`
   );
 
   for (const record of partRaw.split(ROW_SEP)) {
