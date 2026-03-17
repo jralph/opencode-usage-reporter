@@ -4,38 +4,28 @@ A Node.js CLI that reads your local [OpenCode](https://github.com/opencode-ai/op
 
 Useful for understanding how many tokens you're consuming and comparing costs between GitHub Copilot subscriptions vs direct API usage.
 
-## Install
-
-```bash
-npm install -g opencode-usage-reporter
-```
-
-Or run directly with npx:
-
-```bash
-npx opencode-usage-reporter --days 7
-```
-
 ## Requirements
 
 - Node.js 18+
 - `sqlite3` CLI (for reading newer OpenCode databases)
 - OpenCode installed with data in `~/.local/share/opencode/`
 
-## Usage
+## Generating a Report
+
+No install required — run directly with npx:
 
 ```bash
-# Hourly breakdown for the last 7 days (stdout)
-opencode-usage --days 7
+# Hourly breakdown for the last 7 days
+npx jralph/opencode-usage-reporter --days 7
 
 # Summary only (totals + per-model + per-tool, no hourly rows)
-opencode-usage --days 7 --summary-only
+npx jralph/opencode-usage-reporter --days 7 --summary-only
 
 # Save to file
-opencode-usage --days 7 --output report.json
+npx jralph/opencode-usage-reporter --days 7 --output report.json
 
 # Session-level breakdown for the last 30 days
-opencode-usage --days 30 --report sessions --output report.json
+npx jralph/opencode-usage-reporter --days 30 --report sessions --output report.json
 ```
 
 ### Options
@@ -47,6 +37,15 @@ opencode-usage --days 30 --report sessions --output report.json
 | `--output <file>` | stdout | Write JSON to file instead of stdout |
 | `--summary-only` | | Only output totals, model breakdowns, and tool stats |
 | `--help` | | Show help |
+
+### Global Install
+
+If you prefer, you can install globally:
+
+```bash
+npm install -g jralph/opencode-usage-reporter
+opencode-usage --days 7
+```
 
 ## Output Format
 
