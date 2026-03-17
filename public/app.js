@@ -4,6 +4,7 @@ let reports = [];
 let allReportData = [];
 let currentReport = null;
 let charts = {};
+let pricing = {};
 
 /* ── Helpers ── */
 const $ = s => document.querySelector(s);
@@ -77,8 +78,12 @@ function mergeReports(reportDataList) {
 
 /* ── Data loading ── */
 async function loadReports() {
-  const res = await fetch('/api/reports');
-  reports = await res.json();
+  const [reportsRes, pricingRes] = await Promise.all([
+    fetch('/api/reports'),
+    fetch('/api/pricing').catch(() => null),
+  ]);
+  reports = await reportsRes.json();
+  if (pricingRes && pricingRes.ok) pricing = await pricingRes.json();
   const sel = $('#report-select');
 
   // Load all full report data for merging
@@ -124,15 +129,19 @@ function route() {
 window.addEventListener('hashchange', route);
 
 /* ── Format token cost estimate ── */
+function findPricing(model) {
+  const prefixes = ['anthropic/', 'openai/', 'google/', 'x-ai/', 'meta/', 'mistralai/', 'qwen/', 'deepseek/'];
+  for (const p of prefixes) {
+    if (pricing[p + model]) return pricing[p + model];
+  }
+  const key = Object.keys(pricing).find(k => k.endsWith('/' + model));
+  return key ? pricing[key] : null;
+}
+
 function estimateCost(inputTokens, outputTokens, model) {
-  const rates = {
-    'claude-sonnet-4.6': [3, 15], 'claude-haiku-4.5': [0.8, 4],
-    'gpt-5.3-codex': [2, 8], 'gpt-5.4': [2.5, 10], 'gpt-5-nano': [0.1, 0.4],
-    'gemini-3-flash-preview': [0.075, 0.3], 'gemini-3.1-pro-preview': [1.25, 5],
-  };
-  const r = rates[model];
+  const r = findPricing(model);
   if (!r) return null;
-  return (inputTokens / 1e6) * r[0] + (outputTokens / 1e6) * r[1];
+  return (inputTokens / 1e6) * r.prompt + (outputTokens / 1e6) * r.completion;
 }
 
 /* ── Totals row helper ── */
@@ -257,6 +266,7 @@ function renderModels() {
   let tableRows = models.map(m => {
     const total = m.input_tokens + m.output_tokens;
     const cost = estimateCost(m.input_tokens, m.output_tokens, m.model);
+    const rate = findPricing(m.model);
     const ioRatio = m.input_tokens ? (m.output_tokens / m.input_tokens * 100).toFixed(1) : '0';
     const avgPerReq = m.requests ? Math.round(total / m.requests) : 0;
     return `<tr>
@@ -269,6 +279,8 @@ function renderModels() {
       <td class="num">${fmt(m.requests)}</td>
       <td class="num">${fmt(avgPerReq)}</td>
       <td class="num">${ioRatio}%</td>
+      <td class="num">${rate ? '$'+rate.prompt.toFixed(2) : '—'}</td>
+      <td class="num">${rate ? '$'+rate.completion.toFixed(2) : '—'}</td>
       <td class="num">${cost != null ? '$'+cost.toFixed(2) : '—'}</td>
     </tr>`;
   }).join('');
@@ -277,7 +289,8 @@ function renderModels() {
     {v:'',cls:''},{v:'Total',cls:''},
     {v:fmt(tIn),cls:'num'},{v:fmt(tOut),cls:'num'},{v:fmt(tTotal),cls:'num'},
     {v:fmt(tTool),cls:'num'},{v:fmt(tReqs),cls:'num'},{v:fmt(tAvg),cls:'num'},
-    {v:tRatio+'%',cls:'num'},{v:tCost>0?'$'+tCost.toFixed(2):'—',cls:'num'},
+    {v:tRatio+'%',cls:'num'},{v:'',cls:'num'},{v:'',cls:'num'},
+    {v:tCost>0?'$'+tCost.toFixed(2):'—',cls:'num'},
   ]);
 
   const grandTotal = r.totals.input_tokens + r.totals.output_tokens;
@@ -296,7 +309,7 @@ function renderModels() {
       <div class="chart-box"><h3>Input vs Output by Model</h3><div class="chart-wrap"><canvas id="ch-model-io"></canvas></div></div>
     </div>
     <div class="table-box"><h3>Model Details</h3>
-      <table><thead><tr><th>Provider</th><th>Model</th><th class="num">Input</th><th class="num">Output</th><th class="num">Total</th><th class="num">Tool Tokens</th><th class="num">Requests</th><th class="num">Avg/Req</th><th class="num">Out/In</th><th class="num">Est. Cost</th></tr></thead>
+      <table><thead><tr><th>Provider</th><th>Model</th><th class="num">Input</th><th class="num">Output</th><th class="num">Total</th><th class="num">Tool Tokens</th><th class="num">Requests</th><th class="num">Avg/Req</th><th class="num">Out/In</th><th class="num">$/1M In</th><th class="num">$/1M Out</th><th class="num">Est. Cost</th></tr></thead>
       <tbody>${tableRows}</tbody></table>
     </div>`;
 

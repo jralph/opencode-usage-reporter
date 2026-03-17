@@ -2,6 +2,7 @@
 'use strict';
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
@@ -67,13 +68,51 @@ function json(res, data) {
   res.end(JSON.stringify(data));
 }
 
+/* ── OpenRouter pricing cache ── */
+let pricingCache = null;
+let pricingFetchedAt = 0;
+const PRICING_TTL = 3600000; // 1 hour
+
+function fetchOpenRouterPricing() {
+  return new Promise((resolve, reject) => {
+    if (pricingCache && Date.now() - pricingFetchedAt < PRICING_TTL) return resolve(pricingCache);
+    https.get('https://openrouter.ai/api/v1/models', res => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => {
+        try {
+          const models = JSON.parse(body).data || [];
+          pricingCache = models.reduce((acc, m) => {
+            const p = m.pricing;
+            if (p && (p.prompt !== '0' || p.completion !== '0')) {
+              acc[m.id] = { prompt: parseFloat(p.prompt) * 1e6, completion: parseFloat(p.completion) * 1e6 };
+            }
+            return acc;
+          }, {});
+          pricingFetchedAt = Date.now();
+          resolve(pricingCache);
+        } catch (e) { reject(e); }
+      });
+      res.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
 function main() {
   const opts = parseArgs();
   const reports = loadReports(opts.reports);
   console.log(`Loaded ${reports.length} report(s) from ${path.resolve(opts.reports)}`);
 
+  // Pre-fetch pricing on startup
+  fetchOpenRouterPricing().catch(e => console.warn('Failed to pre-fetch OpenRouter pricing:', e.message));
+
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (url.pathname === '/api/pricing') {
+      return fetchOpenRouterPricing()
+        .then(data => json(res, data))
+        .catch(() => { res.writeHead(502); res.end('Failed to fetch pricing'); });
+    }
     if (url.pathname === '/api/reports') {
       return json(res, reports.map(r => ({
         filename: r.filename,
