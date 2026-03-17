@@ -1,0 +1,4061 @@
+{
+  "report_type": "hourly",
+  "period": {
+    "start": "2026-03-10T17:14:01.111Z",
+    "end": "2026-03-17T17:14:01.111Z",
+    "days": 7
+  },
+  "generated_at": "2026-03-17T17:14:11.058Z",
+  "totals": {
+    "input_tokens": 380651842,
+    "output_tokens": 1597926,
+    "estimated_tokens": 118204,
+    "tool_input_tokens": 11384222,
+    "requests": 5077
+  },
+  "model_totals": [
+    {
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 184127156,
+      "output_tokens": 584484,
+      "estimated_tokens": 9062,
+      "tool_input_tokens": 3379253,
+      "requests": 1644
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 111864375,
+      "output_tokens": 233253,
+      "estimated_tokens": 34952,
+      "tool_input_tokens": 2621669,
+      "requests": 1336
+    },
+    {
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 39715083,
+      "output_tokens": 175199,
+      "estimated_tokens": 37395,
+      "tool_input_tokens": 971588,
+      "requests": 725
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 17047574,
+      "output_tokens": 142778,
+      "estimated_tokens": 6581,
+      "tool_input_tokens": 1126440,
+      "requests": 305
+    },
+    {
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
+      "input_tokens": 15916071,
+      "output_tokens": 307305,
+      "estimated_tokens": 6748,
+      "tool_input_tokens": 1471645,
+      "requests": 528
+    },
+    {
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 10995715,
+      "output_tokens": 141477,
+      "estimated_tokens": 10244,
+      "tool_input_tokens": 1652747,
+      "requests": 424
+    },
+    {
+      "provider": "google",
+      "model": "gemini-3.1-pro-preview",
+      "input_tokens": 460348,
+      "output_tokens": 1866,
+      "estimated_tokens": 429,
+      "tool_input_tokens": 44337,
+      "requests": 7
+    },
+    {
+      "provider": "kimi-for-coding",
+      "model": "k2p5",
+      "input_tokens": 396918,
+      "output_tokens": 3506,
+      "estimated_tokens": 3611,
+      "tool_input_tokens": 28407,
+      "requests": 16
+    },
+    {
+      "provider": "opencode",
+      "model": "minimax-m2.5-free",
+      "input_tokens": 119718,
+      "output_tokens": 8058,
+      "estimated_tokens": 298,
+      "tool_input_tokens": 88136,
+      "requests": 38
+    },
+    {
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 4797,
+      "output_tokens": 0,
+      "estimated_tokens": 4797,
+      "tool_input_tokens": 0,
+      "requests": 32
+    },
+    {
+      "provider": "github-copilot",
+      "model": "claude-haiku-4.5",
+      "input_tokens": 1558,
+      "output_tokens": 0,
+      "estimated_tokens": 1558,
+      "tool_input_tokens": 0,
+      "requests": 3
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input_tokens": 1264,
+      "output_tokens": 0,
+      "estimated_tokens": 1264,
+      "tool_input_tokens": 0,
+      "requests": 9
+    },
+    {
+      "provider": "openai",
+      "model": "codex-mini-latest",
+      "input_tokens": 1264,
+      "output_tokens": 0,
+      "estimated_tokens": 1264,
+      "tool_input_tokens": 0,
+      "requests": 9
+    },
+    {
+      "provider": "vercel",
+      "model": "zai/glm-5",
+      "input_tokens": 1,
+      "output_tokens": 0,
+      "estimated_tokens": 1,
+      "tool_input_tokens": 0,
+      "requests": 1
+    }
+  ],
+  "tool_totals": [
+    {
+      "tool": "read",
+      "calls": 1987,
+      "input_tokens": 8278143,
+      "output_tokens": 0
+    },
+    {
+      "tool": "bash",
+      "calls": 1580,
+      "input_tokens": 1169987,
+      "output_tokens": 0
+    },
+    {
+      "tool": "grep",
+      "calls": 663,
+      "input_tokens": 420706,
+      "output_tokens": 0
+    },
+    {
+      "tool": "edit",
+      "calls": 767,
+      "input_tokens": 219893,
+      "output_tokens": 0
+    },
+    {
+      "tool": "apply_patch",
+      "calls": 333,
+      "input_tokens": 201294,
+      "output_tokens": 0
+    },
+    {
+      "tool": "task",
+      "calls": 130,
+      "input_tokens": 152388,
+      "output_tokens": 0
+    },
+    {
+      "tool": "webfetch",
+      "calls": 14,
+      "input_tokens": 125415,
+      "output_tokens": 0
+    },
+    {
+      "tool": "skill",
+      "calls": 54,
+      "input_tokens": 117896,
+      "output_tokens": 0
+    },
+    {
+      "tool": "background_output",
+      "calls": 97,
+      "input_tokens": 110450,
+      "output_tokens": 0
+    },
+    {
+      "tool": "todowrite",
+      "calls": 291,
+      "input_tokens": 102914,
+      "output_tokens": 0
+    },
+    {
+      "tool": "websearch_web_search_exa",
+      "calls": 37,
+      "input_tokens": 96233,
+      "output_tokens": 0
+    },
+    {
+      "tool": "glob",
+      "calls": 221,
+      "input_tokens": 75968,
+      "output_tokens": 0
+    },
+    {
+      "tool": "write",
+      "calls": 30,
+      "input_tokens": 51795,
+      "output_tokens": 0
+    },
+    {
+      "tool": "grep_app_searchGitHub",
+      "calls": 33,
+      "input_tokens": 28295,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_click",
+      "calls": 43,
+      "input_tokens": 28084,
+      "output_tokens": 0
+    },
+    {
+      "tool": "filesystem_read_multiple_files",
+      "calls": 2,
+      "input_tokens": 23083,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_take_snapshot",
+      "calls": 38,
+      "input_tokens": 22952,
+      "output_tokens": 0
+    },
+    {
+      "tool": "codesearch",
+      "calls": 3,
+      "input_tokens": 20048,
+      "output_tokens": 0
+    },
+    {
+      "tool": "context7_query-docs",
+      "calls": 12,
+      "input_tokens": 16579,
+      "output_tokens": 0
+    },
+    {
+      "tool": "github_search_repositories",
+      "calls": 4,
+      "input_tokens": 15453,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_list_network_requests",
+      "calls": 8,
+      "input_tokens": 13418,
+      "output_tokens": 0
+    },
+    {
+      "tool": "web-search_brave_web_search",
+      "calls": 46,
+      "input_tokens": 12683,
+      "output_tokens": 0
+    },
+    {
+      "tool": "ast_grep_search",
+      "calls": 4,
+      "input_tokens": 10840,
+      "output_tokens": 0
+    },
+    {
+      "tool": "lsp_diagnostics",
+      "calls": 192,
+      "input_tokens": 10378,
+      "output_tokens": 0
+    },
+    {
+      "tool": "sequential-thinking_sequentialthinking",
+      "calls": 24,
+      "input_tokens": 7936,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_fill",
+      "calls": 10,
+      "input_tokens": 7826,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_list_console_messages",
+      "calls": 9,
+      "input_tokens": 5695,
+      "output_tokens": 0
+    },
+    {
+      "tool": "context7_resolve-library-id",
+      "calls": 14,
+      "input_tokens": 5582,
+      "output_tokens": 0
+    },
+    {
+      "tool": "github_search_issues",
+      "calls": 2,
+      "input_tokens": 5298,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_evaluate_script",
+      "calls": 26,
+      "input_tokens": 5241,
+      "output_tokens": 0
+    },
+    {
+      "tool": "websearch",
+      "calls": 2,
+      "input_tokens": 5237,
+      "output_tokens": 0
+    },
+    {
+      "tool": "session_read",
+      "calls": 8,
+      "input_tokens": 2874,
+      "output_tokens": 0
+    },
+    {
+      "tool": "exa_web_search_exa",
+      "calls": 1,
+      "input_tokens": 2720,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_wait_for",
+      "calls": 6,
+      "input_tokens": 1856,
+      "output_tokens": 0
+    },
+    {
+      "tool": "question",
+      "calls": 4,
+      "input_tokens": 1509,
+      "output_tokens": 0
+    },
+    {
+      "tool": "call_omo_agent",
+      "calls": 4,
+      "input_tokens": 1408,
+      "output_tokens": 0
+    },
+    {
+      "tool": "skill_use",
+      "calls": 23,
+      "input_tokens": 1279,
+      "output_tokens": 0
+    },
+    {
+      "tool": "background_cancel",
+      "calls": 29,
+      "input_tokens": 1112,
+      "output_tokens": 0
+    },
+    {
+      "tool": "fetch_fetch",
+      "calls": 1,
+      "input_tokens": 1109,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_navigate_page",
+      "calls": 13,
+      "input_tokens": 697,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_fill_form",
+      "calls": 3,
+      "input_tokens": 675,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_get_console_message",
+      "calls": 5,
+      "input_tokens": 404,
+      "output_tokens": 0
+    },
+    {
+      "tool": "github_search_code",
+      "calls": 3,
+      "input_tokens": 281,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_new_page",
+      "calls": 4,
+      "input_tokens": 207,
+      "output_tokens": 0
+    },
+    {
+      "tool": "lsp_symbols",
+      "calls": 5,
+      "input_tokens": 134,
+      "output_tokens": 0
+    },
+    {
+      "tool": "filesystem_list_directory",
+      "calls": 1,
+      "input_tokens": 113,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_list_pages",
+      "calls": 3,
+      "input_tokens": 74,
+      "output_tokens": 0
+    },
+    {
+      "tool": "filesystem_create_directory",
+      "calls": 1,
+      "input_tokens": 37,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_take_screenshot",
+      "calls": 1,
+      "input_tokens": 13,
+      "output_tokens": 0
+    },
+    {
+      "tool": "chrome-devtools_press_key",
+      "calls": 1,
+      "input_tokens": 10,
+      "output_tokens": 0
+    }
+  ],
+  "usage": [
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 1085,
+      "output_tokens": 0,
+      "estimated_tokens": 1085,
+      "tool_input_tokens": 0,
+      "requests": 6,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 1060238,
+      "output_tokens": 4284,
+      "estimated_tokens": 1570,
+      "tool_input_tokens": 283495,
+      "requests": 48,
+      "tools": {
+        "websearch_web_search_exa": {
+          "calls": 5,
+          "input_tokens": 14049
+        },
+        "context7_resolve-library-id": {
+          "calls": 2,
+          "input_tokens": 844
+        },
+        "sequential-thinking_sequentialthinking": {
+          "calls": 1,
+          "input_tokens": 450
+        },
+        "grep_app_searchGitHub": {
+          "calls": 1,
+          "input_tokens": 29
+        },
+        "grep": {
+          "calls": 13,
+          "input_tokens": 5521
+        },
+        "glob": {
+          "calls": 7,
+          "input_tokens": 1349
+        },
+        "read": {
+          "calls": 26,
+          "input_tokens": 259169
+        },
+        "bash": {
+          "calls": 5,
+          "input_tokens": 2084
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "openai",
+      "model": "codex-mini-latest",
+      "input_tokens": 775,
+      "output_tokens": 0,
+      "estimated_tokens": 775,
+      "tool_input_tokens": 0,
+      "requests": 4,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input_tokens": 775,
+      "output_tokens": 0,
+      "estimated_tokens": 775,
+      "tool_input_tokens": 0,
+      "requests": 4,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 8237534,
+      "output_tokens": 28110,
+      "estimated_tokens": 1027,
+      "tool_input_tokens": 442427,
+      "requests": 61,
+      "tools": {
+        "todowrite": {
+          "calls": 3,
+          "input_tokens": 1771
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 81
+        },
+        "task": {
+          "calls": 9,
+          "input_tokens": 3482
+        },
+        "glob": {
+          "calls": 5,
+          "input_tokens": 3192
+        },
+        "grep": {
+          "calls": 7,
+          "input_tokens": 18053
+        },
+        "ast_grep_search": {
+          "calls": 1,
+          "input_tokens": 29
+        },
+        "bash": {
+          "calls": 7,
+          "input_tokens": 7381
+        },
+        "read": {
+          "calls": 48,
+          "input_tokens": 393241
+        },
+        "background_output": {
+          "calls": 5,
+          "input_tokens": 3817
+        },
+        "apply_patch": {
+          "calls": 15,
+          "input_tokens": 10935
+        },
+        "lsp_diagnostics": {
+          "calls": 11,
+          "input_tokens": 445
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 1482856,
+      "output_tokens": 6280,
+      "estimated_tokens": 289,
+      "tool_input_tokens": 104498,
+      "requests": 22,
+      "tools": {
+        "todowrite": {
+          "calls": 1,
+          "input_tokens": 182
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 29
+        },
+        "skill": {
+          "calls": 2,
+          "input_tokens": 1891
+        },
+        "bash": {
+          "calls": 2,
+          "input_tokens": 10987
+        },
+        "read": {
+          "calls": 29,
+          "input_tokens": 83457
+        },
+        "grep": {
+          "calls": 18,
+          "input_tokens": 7952
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "opencode",
+      "model": "minimax-m2.5-free",
+      "input_tokens": 73938,
+      "output_tokens": 4565,
+      "estimated_tokens": 158,
+      "tool_input_tokens": 51806,
+      "requests": 26,
+      "tools": {
+        "context7_resolve-library-id": {
+          "calls": 1,
+          "input_tokens": 446
+        },
+        "context7_query-docs": {
+          "calls": 1,
+          "input_tokens": 1025
+        },
+        "grep_app_searchGitHub": {
+          "calls": 2,
+          "input_tokens": 96
+        },
+        "github_search_code": {
+          "calls": 1,
+          "input_tokens": 92
+        },
+        "read": {
+          "calls": 11,
+          "input_tokens": 39606
+        },
+        "websearch": {
+          "calls": 2,
+          "input_tokens": 5237
+        },
+        "fetch_fetch": {
+          "calls": 1,
+          "input_tokens": 1109
+        },
+        "grep": {
+          "calls": 4,
+          "input_tokens": 4140
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 55
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "vercel",
+      "model": "zai/glm-5",
+      "input_tokens": 1,
+      "output_tokens": 0,
+      "estimated_tokens": 1,
+      "tool_input_tokens": 0,
+      "requests": 1,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 325409,
+      "output_tokens": 1933,
+      "estimated_tokens": 1085,
+      "tool_input_tokens": 49048,
+      "requests": 15,
+      "tools": {
+        "glob": {
+          "calls": 4,
+          "input_tokens": 2090
+        },
+        "grep": {
+          "calls": 12,
+          "input_tokens": 1438
+        },
+        "read": {
+          "calls": 8,
+          "input_tokens": 45520
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T13:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 58948,
+      "output_tokens": 55,
+      "estimated_tokens": 1,
+      "tool_input_tokens": 0,
+      "requests": 2,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T14:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 510,
+      "output_tokens": 0,
+      "estimated_tokens": 510,
+      "tool_input_tokens": 0,
+      "requests": 5,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T14:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 3061845,
+      "output_tokens": 4118,
+      "estimated_tokens": 611,
+      "tool_input_tokens": 280865,
+      "requests": 62,
+      "tools": {
+        "grep": {
+          "calls": 25,
+          "input_tokens": 7139
+        },
+        "glob": {
+          "calls": 10,
+          "input_tokens": 4035
+        },
+        "read": {
+          "calls": 42,
+          "input_tokens": 258402
+        },
+        "websearch_web_search_exa": {
+          "calls": 4,
+          "input_tokens": 11095
+        },
+        "grep_app_searchGitHub": {
+          "calls": 4,
+          "input_tokens": 194
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T14:00:00Z",
+      "provider": "openai",
+      "model": "codex-mini-latest",
+      "input_tokens": 371,
+      "output_tokens": 0,
+      "estimated_tokens": 371,
+      "tool_input_tokens": 0,
+      "requests": 4,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T14:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input_tokens": 371,
+      "output_tokens": 0,
+      "estimated_tokens": 371,
+      "tool_input_tokens": 0,
+      "requests": 4,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T14:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 16164694,
+      "output_tokens": 44496,
+      "estimated_tokens": 953,
+      "tool_input_tokens": 283884,
+      "requests": 122,
+      "tools": {
+        "background_output": {
+          "calls": 8,
+          "input_tokens": 8799
+        },
+        "read": {
+          "calls": 48,
+          "input_tokens": 189994
+        },
+        "grep": {
+          "calls": 15,
+          "input_tokens": 18337
+        },
+        "apply_patch": {
+          "calls": 33,
+          "input_tokens": 13824
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 65
+        },
+        "todowrite": {
+          "calls": 11,
+          "input_tokens": 4087
+        },
+        "bash": {
+          "calls": 26,
+          "input_tokens": 39799
+        },
+        "task": {
+          "calls": 10,
+          "input_tokens": 6618
+        },
+        "lsp_diagnostics": {
+          "calls": 32,
+          "input_tokens": 1570
+        },
+        "background_cancel": {
+          "calls": 2,
+          "input_tokens": 46
+        },
+        "glob": {
+          "calls": 2,
+          "input_tokens": 745
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T14:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 5637760,
+      "output_tokens": 35086,
+      "estimated_tokens": 911,
+      "tool_input_tokens": 261324,
+      "requests": 84,
+      "tools": {
+        "read": {
+          "calls": 102,
+          "input_tokens": 219925
+        },
+        "grep": {
+          "calls": 62,
+          "input_tokens": 25274
+        },
+        "todowrite": {
+          "calls": 2,
+          "input_tokens": 360
+        },
+        "bash": {
+          "calls": 4,
+          "input_tokens": 15631
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 103
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 31
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T14:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 370067,
+      "output_tokens": 8422,
+      "estimated_tokens": 613,
+      "tool_input_tokens": 73788,
+      "requests": 25,
+      "tools": {
+        "bash": {
+          "calls": 32,
+          "input_tokens": 9492
+        },
+        "read": {
+          "calls": 11,
+          "input_tokens": 64296
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T15:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 664,
+      "output_tokens": 0,
+      "estimated_tokens": 664,
+      "tool_input_tokens": 0,
+      "requests": 4,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T15:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 2121020,
+      "output_tokens": 9573,
+      "estimated_tokens": 1248,
+      "tool_input_tokens": 306336,
+      "requests": 70,
+      "tools": {
+        "web-search_brave_web_search": {
+          "calls": 21,
+          "input_tokens": 5926
+        },
+        "context7_resolve-library-id": {
+          "calls": 3,
+          "input_tokens": 1358
+        },
+        "grep_app_searchGitHub": {
+          "calls": 10,
+          "input_tokens": 11135
+        },
+        "websearch_web_search_exa": {
+          "calls": 6,
+          "input_tokens": 17406
+        },
+        "grep": {
+          "calls": 15,
+          "input_tokens": 3517
+        },
+        "read": {
+          "calls": 25,
+          "input_tokens": 218458
+        },
+        "bash": {
+          "calls": 7,
+          "input_tokens": 5550
+        },
+        "glob": {
+          "calls": 4,
+          "input_tokens": 686
+        },
+        "context7_query-docs": {
+          "calls": 1,
+          "input_tokens": 971
+        },
+        "webfetch": {
+          "calls": 5,
+          "input_tokens": 41329
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T15:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 16960091,
+      "output_tokens": 51330,
+      "estimated_tokens": 1545,
+      "tool_input_tokens": 302797,
+      "requests": 191,
+      "tools": {
+        "todowrite": {
+          "calls": 12,
+          "input_tokens": 4246
+        },
+        "bash": {
+          "calls": 40,
+          "input_tokens": 33098
+        },
+        "read": {
+          "calls": 73,
+          "input_tokens": 183838
+        },
+        "skill_use": {
+          "calls": 2,
+          "input_tokens": 110
+        },
+        "skill": {
+          "calls": 10,
+          "input_tokens": 17614
+        },
+        "apply_patch": {
+          "calls": 24,
+          "input_tokens": 12217
+        },
+        "grep": {
+          "calls": 50,
+          "input_tokens": 26952
+        },
+        "lsp_diagnostics": {
+          "calls": 10,
+          "input_tokens": 698
+        },
+        "task": {
+          "calls": 9,
+          "input_tokens": 4508
+        },
+        "glob": {
+          "calls": 2,
+          "input_tokens": 1800
+        },
+        "ast_grep_search": {
+          "calls": 1,
+          "input_tokens": 7686
+        },
+        "background_output": {
+          "calls": 5,
+          "input_tokens": 6984
+        },
+        "session_read": {
+          "calls": 8,
+          "input_tokens": 2874
+        },
+        "background_cancel": {
+          "calls": 6,
+          "input_tokens": 172
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T15:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 4585344,
+      "output_tokens": 17783,
+      "estimated_tokens": 707,
+      "tool_input_tokens": 145040,
+      "requests": 46,
+      "tools": {
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 39
+        },
+        "bash": {
+          "calls": 6,
+          "input_tokens": 22531
+        },
+        "read": {
+          "calls": 43,
+          "input_tokens": 112420
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 92
+        },
+        "grep": {
+          "calls": 15,
+          "input_tokens": 9958
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T15:00:00Z",
+      "provider": "opencode",
+      "model": "minimax-m2.5-free",
+      "input_tokens": 45780,
+      "output_tokens": 3493,
+      "estimated_tokens": 140,
+      "tool_input_tokens": 36330,
+      "requests": 12,
+      "tools": {
+        "codesearch": {
+          "calls": 3,
+          "input_tokens": 20048
+        },
+        "grep_app_searchGitHub": {
+          "calls": 2,
+          "input_tokens": 160
+        },
+        "grep": {
+          "calls": 1,
+          "input_tokens": 1429
+        },
+        "read": {
+          "calls": 4,
+          "input_tokens": 14693
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T15:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 132860,
+      "output_tokens": 2167,
+      "estimated_tokens": 664,
+      "tool_input_tokens": 27543,
+      "requests": 10,
+      "tools": {
+        "grep": {
+          "calls": 9,
+          "input_tokens": 843
+        },
+        "read": {
+          "calls": 6,
+          "input_tokens": 24936
+        },
+        "bash": {
+          "calls": 8,
+          "input_tokens": 1764
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T16:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 459,
+      "output_tokens": 0,
+      "estimated_tokens": 459,
+      "tool_input_tokens": 0,
+      "requests": 3,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T16:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 403300,
+      "output_tokens": 1602,
+      "estimated_tokens": 459,
+      "tool_input_tokens": 124775,
+      "requests": 14,
+      "tools": {
+        "grep": {
+          "calls": 2,
+          "input_tokens": 2246
+        },
+        "glob": {
+          "calls": 2,
+          "input_tokens": 63
+        },
+        "read": {
+          "calls": 11,
+          "input_tokens": 118281
+        },
+        "bash": {
+          "calls": 2,
+          "input_tokens": 4185
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T16:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 13004460,
+      "output_tokens": 56040,
+      "estimated_tokens": 347,
+      "tool_input_tokens": 213460,
+      "requests": 113,
+      "tools": {
+        "grep": {
+          "calls": 17,
+          "input_tokens": 11085
+        },
+        "read": {
+          "calls": 37,
+          "input_tokens": 120353
+        },
+        "bash": {
+          "calls": 14,
+          "input_tokens": 17860
+        },
+        "todowrite": {
+          "calls": 12,
+          "input_tokens": 2739
+        },
+        "task": {
+          "calls": 4,
+          "input_tokens": 1384
+        },
+        "ast_grep_search": {
+          "calls": 1,
+          "input_tokens": 2310
+        },
+        "background_cancel": {
+          "calls": 4,
+          "input_tokens": 111
+        },
+        "skill_use": {
+          "calls": 2,
+          "input_tokens": 148
+        },
+        "skill": {
+          "calls": 11,
+          "input_tokens": 28770
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 35
+        },
+        "apply_patch": {
+          "calls": 24,
+          "input_tokens": 25764
+        },
+        "lsp_diagnostics": {
+          "calls": 8,
+          "input_tokens": 299
+        },
+        "background_output": {
+          "calls": 2,
+          "input_tokens": 2602
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T16:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 94305,
+      "output_tokens": 3274,
+      "estimated_tokens": 612,
+      "tool_input_tokens": 51878,
+      "requests": 8,
+      "tools": {
+        "bash": {
+          "calls": 1,
+          "input_tokens": 439
+        },
+        "glob": {
+          "calls": 3,
+          "input_tokens": 2859
+        },
+        "read": {
+          "calls": 3,
+          "input_tokens": 48234
+        },
+        "lsp_symbols": {
+          "calls": 2,
+          "input_tokens": 51
+        },
+        "lsp_diagnostics": {
+          "calls": 2,
+          "input_tokens": 51
+        },
+        "grep": {
+          "calls": 1,
+          "input_tokens": 244
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T17:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 168,
+      "output_tokens": 0,
+      "estimated_tokens": 168,
+      "tool_input_tokens": 0,
+      "requests": 1,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T17:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 569487,
+      "output_tokens": 409,
+      "estimated_tokens": 168,
+      "tool_input_tokens": 93547,
+      "requests": 10,
+      "tools": {
+        "grep": {
+          "calls": 4,
+          "input_tokens": 2701
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 2160
+        },
+        "read": {
+          "calls": 9,
+          "input_tokens": 88686
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T17:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 8755736,
+      "output_tokens": 28551,
+      "estimated_tokens": 130,
+      "tool_input_tokens": 97961,
+      "requests": 80,
+      "tools": {
+        "todowrite": {
+          "calls": 6,
+          "input_tokens": 1288
+        },
+        "apply_patch": {
+          "calls": 15,
+          "input_tokens": 10713
+        },
+        "lsp_diagnostics": {
+          "calls": 3,
+          "input_tokens": 102
+        },
+        "bash": {
+          "calls": 13,
+          "input_tokens": 26503
+        },
+        "task": {
+          "calls": 3,
+          "input_tokens": 1949
+        },
+        "grep": {
+          "calls": 18,
+          "input_tokens": 14799
+        },
+        "read": {
+          "calls": 21,
+          "input_tokens": 39234
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 49
+        },
+        "background_output": {
+          "calls": 2,
+          "input_tokens": 3324
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T17:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 1489730,
+      "output_tokens": 11410,
+      "estimated_tokens": 261,
+      "tool_input_tokens": 75298,
+      "requests": 26,
+      "tools": {
+        "read": {
+          "calls": 27,
+          "input_tokens": 65152
+        },
+        "grep": {
+          "calls": 18,
+          "input_tokens": 9840
+        },
+        "lsp_diagnostics": {
+          "calls": 5,
+          "input_tokens": 306
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T17:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 65096,
+      "output_tokens": 3191,
+      "estimated_tokens": 281,
+      "tool_input_tokens": 19356,
+      "requests": 5,
+      "tools": {
+        "read": {
+          "calls": 1,
+          "input_tokens": 17604
+        },
+        "grep": {
+          "calls": 3,
+          "input_tokens": 1695
+        },
+        "lsp_symbols": {
+          "calls": 2,
+          "input_tokens": 57
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T18:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 424,
+      "output_tokens": 0,
+      "estimated_tokens": 424,
+      "tool_input_tokens": 0,
+      "requests": 3,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T18:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 1360043,
+      "output_tokens": 4802,
+      "estimated_tokens": 424,
+      "tool_input_tokens": 221518,
+      "requests": 28,
+      "tools": {
+        "grep": {
+          "calls": 16,
+          "input_tokens": 6157
+        },
+        "read": {
+          "calls": 24,
+          "input_tokens": 214807
+        },
+        "glob": {
+          "calls": 4,
+          "input_tokens": 554
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T18:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 8345742,
+      "output_tokens": 24460,
+      "estimated_tokens": 289,
+      "tool_input_tokens": 174622,
+      "requests": 68,
+      "tools": {
+        "todowrite": {
+          "calls": 4,
+          "input_tokens": 1112
+        },
+        "task": {
+          "calls": 8,
+          "input_tokens": 2169
+        },
+        "grep": {
+          "calls": 14,
+          "input_tokens": 17655
+        },
+        "read": {
+          "calls": 33,
+          "input_tokens": 135732
+        },
+        "background_output": {
+          "calls": 5,
+          "input_tokens": 3885
+        },
+        "apply_patch": {
+          "calls": 12,
+          "input_tokens": 6724
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 79
+        },
+        "skill": {
+          "calls": 3,
+          "input_tokens": 5438
+        },
+        "lsp_diagnostics": {
+          "calls": 10,
+          "input_tokens": 627
+        },
+        "bash": {
+          "calls": 6,
+          "input_tokens": 1201
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T18:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 1340795,
+      "output_tokens": 8459,
+      "estimated_tokens": 716,
+      "tool_input_tokens": 93235,
+      "requests": 36,
+      "tools": {
+        "read": {
+          "calls": 12,
+          "input_tokens": 82209
+        },
+        "glob": {
+          "calls": 5,
+          "input_tokens": 235
+        },
+        "grep": {
+          "calls": 7,
+          "input_tokens": 2459
+        },
+        "lsp_symbols": {
+          "calls": 1,
+          "input_tokens": 26
+        },
+        "bash": {
+          "calls": 32,
+          "input_tokens": 8306
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T19:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 299,
+      "output_tokens": 0,
+      "estimated_tokens": 299,
+      "tool_input_tokens": 0,
+      "requests": 2,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-14T19:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 726040,
+      "output_tokens": 3680,
+      "estimated_tokens": 299,
+      "tool_input_tokens": 103425,
+      "requests": 19,
+      "tools": {
+        "glob": {
+          "calls": 2,
+          "input_tokens": 3330
+        },
+        "grep": {
+          "calls": 3,
+          "input_tokens": 1110
+        },
+        "read": {
+          "calls": 18,
+          "input_tokens": 90962
+        },
+        "bash": {
+          "calls": 1,
+          "input_tokens": 8023
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T19:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 11031650,
+      "output_tokens": 29825,
+      "estimated_tokens": 826,
+      "tool_input_tokens": 159541,
+      "requests": 90,
+      "tools": {
+        "background_output": {
+          "calls": 9,
+          "input_tokens": 14907
+        },
+        "bash": {
+          "calls": 33,
+          "input_tokens": 43228
+        },
+        "todowrite": {
+          "calls": 10,
+          "input_tokens": 2946
+        },
+        "background_cancel": {
+          "calls": 1,
+          "input_tokens": 36
+        },
+        "task": {
+          "calls": 6,
+          "input_tokens": 2162
+        },
+        "read": {
+          "calls": 24,
+          "input_tokens": 74007
+        },
+        "grep": {
+          "calls": 8,
+          "input_tokens": 10606
+        },
+        "apply_patch": {
+          "calls": 20,
+          "input_tokens": 11527
+        },
+        "lsp_diagnostics": {
+          "calls": 2,
+          "input_tokens": 122
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T19:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 522115,
+      "output_tokens": 12461,
+      "estimated_tokens": 348,
+      "tool_input_tokens": 95289,
+      "requests": 16,
+      "tools": {
+        "grep": {
+          "calls": 9,
+          "input_tokens": 8502
+        },
+        "read": {
+          "calls": 14,
+          "input_tokens": 66053
+        },
+        "bash": {
+          "calls": 6,
+          "input_tokens": 20734
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T19:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 960787,
+      "output_tokens": 16004,
+      "estimated_tokens": 585,
+      "tool_input_tokens": 74316,
+      "requests": 36,
+      "tools": {
+        "bash": {
+          "calls": 73,
+          "input_tokens": 39907
+        },
+        "read": {
+          "calls": 10,
+          "input_tokens": 33117
+        },
+        "grep": {
+          "calls": 2,
+          "input_tokens": 1292
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T20:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 1789534,
+      "output_tokens": 3226,
+      "estimated_tokens": 78,
+      "tool_input_tokens": 7343,
+      "requests": 16,
+      "tools": {
+        "grep": {
+          "calls": 1,
+          "input_tokens": 161
+        },
+        "read": {
+          "calls": 1,
+          "input_tokens": 2210
+        },
+        "apply_patch": {
+          "calls": 3,
+          "input_tokens": 1078
+        },
+        "bash": {
+          "calls": 8,
+          "input_tokens": 2167
+        },
+        "task": {
+          "calls": 1,
+          "input_tokens": 391
+        },
+        "background_output": {
+          "calls": 1,
+          "input_tokens": 1032
+        },
+        "todowrite": {
+          "calls": 1,
+          "input_tokens": 304
+        }
+      }
+    },
+    {
+      "hour": "2026-03-14T20:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 61481,
+      "output_tokens": 1918,
+      "estimated_tokens": 181,
+      "tool_input_tokens": 18745,
+      "requests": 3,
+      "tools": {
+        "read": {
+          "calls": 2,
+          "input_tokens": 18745
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T12:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 1112544,
+      "output_tokens": 7472,
+      "estimated_tokens": 570,
+      "tool_input_tokens": 134754,
+      "requests": 29,
+      "tools": {
+        "sequential-thinking_sequentialthinking": {
+          "calls": 10,
+          "input_tokens": 1723
+        },
+        "web-search_brave_web_search": {
+          "calls": 12,
+          "input_tokens": 3553
+        },
+        "context7_resolve-library-id": {
+          "calls": 3,
+          "input_tokens": 1395
+        },
+        "grep_app_searchGitHub": {
+          "calls": 13,
+          "input_tokens": 14012
+        },
+        "context7_query-docs": {
+          "calls": 3,
+          "input_tokens": 5487
+        },
+        "websearch_web_search_exa": {
+          "calls": 8,
+          "input_tokens": 23428
+        },
+        "github_search_repositories": {
+          "calls": 4,
+          "input_tokens": 15453
+        },
+        "bash": {
+          "calls": 2,
+          "input_tokens": 1826
+        },
+        "grep": {
+          "calls": 4,
+          "input_tokens": 3215
+        },
+        "read": {
+          "calls": 8,
+          "input_tokens": 56434
+        },
+        "github_search_issues": {
+          "calls": 2,
+          "input_tokens": 5298
+        },
+        "exa_web_search_exa": {
+          "calls": 1,
+          "input_tokens": 2720
+        },
+        "github_search_code": {
+          "calls": 2,
+          "input_tokens": 189
+        },
+        "webfetch": {
+          "calls": 1,
+          "input_tokens": 21
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T12:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 6360648,
+      "output_tokens": 22334,
+      "estimated_tokens": 911,
+      "tool_input_tokens": 213233,
+      "requests": 68,
+      "tools": {
+        "todowrite": {
+          "calls": 5,
+          "input_tokens": 1448
+        },
+        "task": {
+          "calls": 9,
+          "input_tokens": 2884
+        },
+        "grep": {
+          "calls": 14,
+          "input_tokens": 19375
+        },
+        "ast_grep_search": {
+          "calls": 1,
+          "input_tokens": 815
+        },
+        "bash": {
+          "calls": 12,
+          "input_tokens": 5010
+        },
+        "read": {
+          "calls": 30,
+          "input_tokens": 161827
+        },
+        "background_output": {
+          "calls": 5,
+          "input_tokens": 9841
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 43
+        },
+        "skill": {
+          "calls": 2,
+          "input_tokens": 5069
+        },
+        "apply_patch": {
+          "calls": 12,
+          "input_tokens": 6382
+        },
+        "lsp_diagnostics": {
+          "calls": 6,
+          "input_tokens": 418
+        },
+        "background_cancel": {
+          "calls": 1,
+          "input_tokens": 61
+        },
+        "chrome-devtools_new_page": {
+          "calls": 1,
+          "input_tokens": 42
+        },
+        "chrome-devtools_list_pages": {
+          "calls": 1,
+          "input_tokens": 18
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T12:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 1558752,
+      "output_tokens": 14507,
+      "estimated_tokens": 502,
+      "tool_input_tokens": 122587,
+      "requests": 41,
+      "tools": {
+        "bash": {
+          "calls": 53,
+          "input_tokens": 20498
+        },
+        "read": {
+          "calls": 31,
+          "input_tokens": 97740
+        },
+        "glob": {
+          "calls": 21,
+          "input_tokens": 1297
+        },
+        "grep": {
+          "calls": 6,
+          "input_tokens": 3052
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T13:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 301,
+      "output_tokens": 0,
+      "estimated_tokens": 301,
+      "tool_input_tokens": 0,
+      "requests": 2,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-15T13:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 558755,
+      "output_tokens": 3411,
+      "estimated_tokens": 301,
+      "tool_input_tokens": 116342,
+      "requests": 16,
+      "tools": {
+        "glob": {
+          "calls": 7,
+          "input_tokens": 1643
+        },
+        "grep": {
+          "calls": 5,
+          "input_tokens": 1686
+        },
+        "read": {
+          "calls": 14,
+          "input_tokens": 113013
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T13:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 19742489,
+      "output_tokens": 45213,
+      "estimated_tokens": 158,
+      "tool_input_tokens": 86705,
+      "requests": 135,
+      "tools": {
+        "bash": {
+          "calls": 50,
+          "input_tokens": 31301
+        },
+        "chrome-devtools_new_page": {
+          "calls": 1,
+          "input_tokens": 59
+        },
+        "background_output": {
+          "calls": 1,
+          "input_tokens": 3478
+        },
+        "chrome-devtools_take_snapshot": {
+          "calls": 4,
+          "input_tokens": 2708
+        },
+        "chrome-devtools_click": {
+          "calls": 6,
+          "input_tokens": 5708
+        },
+        "chrome-devtools_list_network_requests": {
+          "calls": 1,
+          "input_tokens": 2081
+        },
+        "chrome-devtools_evaluate_script": {
+          "calls": 15,
+          "input_tokens": 3651
+        },
+        "chrome-devtools_list_console_messages": {
+          "calls": 1,
+          "input_tokens": 403
+        },
+        "grep": {
+          "calls": 7,
+          "input_tokens": 2534
+        },
+        "apply_patch": {
+          "calls": 26,
+          "input_tokens": 10561
+        },
+        "read": {
+          "calls": 9,
+          "input_tokens": 20265
+        },
+        "chrome-devtools_navigate_page": {
+          "calls": 6,
+          "input_tokens": 324
+        },
+        "chrome-devtools_wait_for": {
+          "calls": 6,
+          "input_tokens": 1856
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 69
+        },
+        "background_cancel": {
+          "calls": 7,
+          "input_tokens": 234
+        },
+        "lsp_diagnostics": {
+          "calls": 10,
+          "input_tokens": 445
+        },
+        "todowrite": {
+          "calls": 5,
+          "input_tokens": 1028
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T13:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 43502,
+      "output_tokens": 1476,
+      "estimated_tokens": 301,
+      "tool_input_tokens": 59432,
+      "requests": 5,
+      "tools": {
+        "read": {
+          "calls": 10,
+          "input_tokens": 55847
+        },
+        "glob": {
+          "calls": 2,
+          "input_tokens": 2254
+        },
+        "grep": {
+          "calls": 1,
+          "input_tokens": 638
+        },
+        "bash": {
+          "calls": 3,
+          "input_tokens": 693
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T14:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 457,
+      "output_tokens": 0,
+      "estimated_tokens": 457,
+      "tool_input_tokens": 0,
+      "requests": 3,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-15T14:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 1219834,
+      "output_tokens": 6698,
+      "estimated_tokens": 624,
+      "tool_input_tokens": 143556,
+      "requests": 36,
+      "tools": {
+        "web-search_brave_web_search": {
+          "calls": 2,
+          "input_tokens": 49
+        },
+        "context7_resolve-library-id": {
+          "calls": 1,
+          "input_tokens": 452
+        },
+        "context7_query-docs": {
+          "calls": 3,
+          "input_tokens": 3601
+        },
+        "websearch_web_search_exa": {
+          "calls": 2,
+          "input_tokens": 5411
+        },
+        "grep": {
+          "calls": 10,
+          "input_tokens": 2056
+        },
+        "glob": {
+          "calls": 5,
+          "input_tokens": 2863
+        },
+        "read": {
+          "calls": 22,
+          "input_tokens": 126127
+        },
+        "bash": {
+          "calls": 1,
+          "input_tokens": 2997
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T14:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 20899818,
+      "output_tokens": 49644,
+      "estimated_tokens": 331,
+      "tool_input_tokens": 261126,
+      "requests": 176,
+      "tools": {
+        "todowrite": {
+          "calls": 4,
+          "input_tokens": 1130
+        },
+        "task": {
+          "calls": 5,
+          "input_tokens": 1757
+        },
+        "grep": {
+          "calls": 21,
+          "input_tokens": 12690
+        },
+        "read": {
+          "calls": 42,
+          "input_tokens": 137154
+        },
+        "background_output": {
+          "calls": 3,
+          "input_tokens": 4112
+        },
+        "glob": {
+          "calls": 5,
+          "input_tokens": 922
+        },
+        "skill_use": {
+          "calls": 2,
+          "input_tokens": 92
+        },
+        "skill": {
+          "calls": 3,
+          "input_tokens": 7792
+        },
+        "bash": {
+          "calls": 58,
+          "input_tokens": 40139
+        },
+        "chrome-devtools_list_pages": {
+          "calls": 2,
+          "input_tokens": 56
+        },
+        "chrome-devtools_new_page": {
+          "calls": 2,
+          "input_tokens": 106
+        },
+        "apply_patch": {
+          "calls": 23,
+          "input_tokens": 8221
+        },
+        "lsp_diagnostics": {
+          "calls": 8,
+          "input_tokens": 428
+        },
+        "chrome-devtools_take_snapshot": {
+          "calls": 3,
+          "input_tokens": 2185
+        },
+        "chrome-devtools_click": {
+          "calls": 15,
+          "input_tokens": 22084
+        },
+        "chrome-devtools_navigate_page": {
+          "calls": 1,
+          "input_tokens": 64
+        },
+        "chrome-devtools_fill_form": {
+          "calls": 2,
+          "input_tokens": 638
+        },
+        "chrome-devtools_list_network_requests": {
+          "calls": 1,
+          "input_tokens": 8328
+        },
+        "chrome-devtools_list_console_messages": {
+          "calls": 1,
+          "input_tokens": 4003
+        },
+        "chrome-devtools_fill": {
+          "calls": 1,
+          "input_tokens": 7635
+        },
+        "chrome-devtools_evaluate_script": {
+          "calls": 11,
+          "input_tokens": 1590
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T14:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 292850,
+      "output_tokens": 4816,
+      "estimated_tokens": 261,
+      "tool_input_tokens": 29874,
+      "requests": 11,
+      "tools": {
+        "todowrite": {
+          "calls": 3,
+          "input_tokens": 536
+        },
+        "read": {
+          "calls": 10,
+          "input_tokens": 26702
+        },
+        "glob": {
+          "calls": 2,
+          "input_tokens": 150
+        },
+        "grep": {
+          "calls": 4,
+          "input_tokens": 2486
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T14:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 547772,
+      "output_tokens": 3728,
+      "estimated_tokens": 457,
+      "tool_input_tokens": 133192,
+      "requests": 19,
+      "tools": {
+        "bash": {
+          "calls": 11,
+          "input_tokens": 5446
+        },
+        "grep": {
+          "calls": 2,
+          "input_tokens": 420
+        },
+        "read": {
+          "calls": 30,
+          "input_tokens": 127116
+        },
+        "glob": {
+          "calls": 3,
+          "input_tokens": 210
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T15:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 312,
+      "output_tokens": 0,
+      "estimated_tokens": 312,
+      "tool_input_tokens": 0,
+      "requests": 2,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-15T15:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 221700,
+      "output_tokens": 2541,
+      "estimated_tokens": 312,
+      "tool_input_tokens": 90962,
+      "requests": 10,
+      "tools": {
+        "glob": {
+          "calls": 2,
+          "input_tokens": 2139
+        },
+        "grep": {
+          "calls": 7,
+          "input_tokens": 8247
+        },
+        "read": {
+          "calls": 7,
+          "input_tokens": 80576
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T15:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 10781813,
+      "output_tokens": 53370,
+      "estimated_tokens": 788,
+      "tool_input_tokens": 329623,
+      "requests": 108,
+      "tools": {
+        "glob": {
+          "calls": 3,
+          "input_tokens": 250
+        },
+        "bash": {
+          "calls": 44,
+          "input_tokens": 63081
+        },
+        "apply_patch": {
+          "calls": 20,
+          "input_tokens": 13047
+        },
+        "grep": {
+          "calls": 12,
+          "input_tokens": 11471
+        },
+        "read": {
+          "calls": 43,
+          "input_tokens": 205238
+        },
+        "background_output": {
+          "calls": 5,
+          "input_tokens": 4605
+        },
+        "todowrite": {
+          "calls": 8,
+          "input_tokens": 3108
+        },
+        "skill_use": {
+          "calls": 2,
+          "input_tokens": 152
+        },
+        "skill": {
+          "calls": 11,
+          "input_tokens": 25732
+        },
+        "task": {
+          "calls": 5,
+          "input_tokens": 2532
+        },
+        "lsp_diagnostics": {
+          "calls": 8,
+          "input_tokens": 407
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T15:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 964545,
+      "output_tokens": 13502,
+      "estimated_tokens": 540,
+      "tool_input_tokens": 58946,
+      "requests": 28,
+      "tools": {
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 39
+        },
+        "skill": {
+          "calls": 1,
+          "input_tokens": 835
+        },
+        "todowrite": {
+          "calls": 3,
+          "input_tokens": 578
+        },
+        "bash": {
+          "calls": 5,
+          "input_tokens": 10414
+        },
+        "grep": {
+          "calls": 12,
+          "input_tokens": 8706
+        },
+        "read": {
+          "calls": 15,
+          "input_tokens": 38374
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T15:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 1262251,
+      "output_tokens": 12499,
+      "estimated_tokens": 617,
+      "tool_input_tokens": 136970,
+      "requests": 44,
+      "tools": {
+        "bash": {
+          "calls": 81,
+          "input_tokens": 22269
+        },
+        "read": {
+          "calls": 14,
+          "input_tokens": 104461
+        },
+        "glob": {
+          "calls": 5,
+          "input_tokens": 362
+        },
+        "grep": {
+          "calls": 8,
+          "input_tokens": 9878
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T16:00:00Z",
+      "provider": "github-copilot",
+      "model": "grok-code-fast-1",
+      "input_tokens": 118,
+      "output_tokens": 0,
+      "estimated_tokens": 118,
+      "tool_input_tokens": 0,
+      "requests": 1,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-15T16:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 118,
+      "output_tokens": 0,
+      "estimated_tokens": 118,
+      "tool_input_tokens": 0,
+      "requests": 1,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-15T16:00:00Z",
+      "provider": "openai",
+      "model": "codex-mini-latest",
+      "input_tokens": 118,
+      "output_tokens": 0,
+      "estimated_tokens": 118,
+      "tool_input_tokens": 0,
+      "requests": 1,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-15T16:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "input_tokens": 118,
+      "output_tokens": 0,
+      "estimated_tokens": 118,
+      "tool_input_tokens": 0,
+      "requests": 1,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-15T16:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 2551968,
+      "output_tokens": 7479,
+      "estimated_tokens": 121,
+      "tool_input_tokens": 34319,
+      "requests": 25,
+      "tools": {
+        "todowrite": {
+          "calls": 3,
+          "input_tokens": 1061
+        },
+        "task": {
+          "calls": 2,
+          "input_tokens": 515
+        },
+        "grep": {
+          "calls": 5,
+          "input_tokens": 1176
+        },
+        "read": {
+          "calls": 8,
+          "input_tokens": 23661
+        },
+        "apply_patch": {
+          "calls": 3,
+          "input_tokens": 2529
+        },
+        "background_output": {
+          "calls": 2,
+          "input_tokens": 3016
+        },
+        "bash": {
+          "calls": 9,
+          "input_tokens": 2335
+        },
+        "background_cancel": {
+          "calls": 1,
+          "input_tokens": 26
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T16:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 109774,
+      "output_tokens": 3620,
+      "estimated_tokens": 226,
+      "tool_input_tokens": 26412,
+      "requests": 7,
+      "tools": {
+        "read": {
+          "calls": 2,
+          "input_tokens": 26136
+        },
+        "bash": {
+          "calls": 3,
+          "input_tokens": 161
+        },
+        "glob": {
+          "calls": 2,
+          "input_tokens": 115
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T18:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 12663240,
+      "output_tokens": 46400,
+      "estimated_tokens": 871,
+      "tool_input_tokens": 327698,
+      "requests": 135,
+      "tools": {
+        "question": {
+          "calls": 1,
+          "input_tokens": 791
+        },
+        "todowrite": {
+          "calls": 5,
+          "input_tokens": 1973
+        },
+        "skill_use": {
+          "calls": 2,
+          "input_tokens": 152
+        },
+        "skill": {
+          "calls": 3,
+          "input_tokens": 4919
+        },
+        "task": {
+          "calls": 3,
+          "input_tokens": 702
+        },
+        "glob": {
+          "calls": 6,
+          "input_tokens": 2139
+        },
+        "grep": {
+          "calls": 35,
+          "input_tokens": 31351
+        },
+        "read": {
+          "calls": 58,
+          "input_tokens": 218864
+        },
+        "background_output": {
+          "calls": 6,
+          "input_tokens": 6393
+        },
+        "apply_patch": {
+          "calls": 34,
+          "input_tokens": 18918
+        },
+        "lsp_diagnostics": {
+          "calls": 16,
+          "input_tokens": 973
+        },
+        "bash": {
+          "calls": 18,
+          "input_tokens": 40523
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T18:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 927058,
+      "output_tokens": 9302,
+      "estimated_tokens": 335,
+      "tool_input_tokens": 151921,
+      "requests": 29,
+      "tools": {
+        "glob": {
+          "calls": 4,
+          "input_tokens": 436
+        },
+        "grep": {
+          "calls": 28,
+          "input_tokens": 14439
+        },
+        "read": {
+          "calls": 26,
+          "input_tokens": 136330
+        },
+        "bash": {
+          "calls": 5,
+          "input_tokens": 716
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T19:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 135604,
+      "output_tokens": 2400,
+      "estimated_tokens": 205,
+      "tool_input_tokens": 10478,
+      "requests": 5,
+      "tools": {
+        "sequential-thinking_sequentialthinking": {
+          "calls": 3,
+          "input_tokens": 993
+        },
+        "web-search_brave_web_search": {
+          "calls": 4,
+          "input_tokens": 2354
+        },
+        "context7_resolve-library-id": {
+          "calls": 1,
+          "input_tokens": 435
+        },
+        "websearch_web_search_exa": {
+          "calls": 2,
+          "input_tokens": 5458
+        },
+        "context7_query-docs": {
+          "calls": 1,
+          "input_tokens": 1238
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T19:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 4050246,
+      "output_tokens": 9810,
+      "estimated_tokens": 6,
+      "tool_input_tokens": 35757,
+      "requests": 31,
+      "tools": {
+        "todowrite": {
+          "calls": 5,
+          "input_tokens": 981
+        },
+        "grep": {
+          "calls": 3,
+          "input_tokens": 1274
+        },
+        "read": {
+          "calls": 4,
+          "input_tokens": 26835
+        },
+        "apply_patch": {
+          "calls": 11,
+          "input_tokens": 5847
+        },
+        "bash": {
+          "calls": 3,
+          "input_tokens": 754
+        },
+        "lsp_diagnostics": {
+          "calls": 2,
+          "input_tokens": 66
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T19:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 1313066,
+      "output_tokens": 21633,
+      "estimated_tokens": 931,
+      "tool_input_tokens": 272569,
+      "requests": 51,
+      "tools": {
+        "bash": {
+          "calls": 93,
+          "input_tokens": 33118
+        },
+        "glob": {
+          "calls": 12,
+          "input_tokens": 2903
+        },
+        "read": {
+          "calls": 26,
+          "input_tokens": 229588
+        },
+        "grep": {
+          "calls": 12,
+          "input_tokens": 6960
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T19:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 7951492,
+      "output_tokens": 32621,
+      "estimated_tokens": 6167,
+      "tool_input_tokens": 278059,
+      "requests": 141,
+      "tools": {
+        "task": {
+          "calls": 9,
+          "input_tokens": 9983
+        },
+        "glob": {
+          "calls": 7,
+          "input_tokens": 5293
+        },
+        "read": {
+          "calls": 64,
+          "input_tokens": 210751
+        },
+        "background_output": {
+          "calls": 15,
+          "input_tokens": 16000
+        },
+        "todowrite": {
+          "calls": 11,
+          "input_tokens": 7486
+        },
+        "bash": {
+          "calls": 14,
+          "input_tokens": 12898
+        },
+        "write": {
+          "calls": 4,
+          "input_tokens": 4037
+        },
+        "edit": {
+          "calls": 30,
+          "input_tokens": 6867
+        },
+        "grep": {
+          "calls": 13,
+          "input_tokens": 4744
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T20:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 776472,
+      "output_tokens": 8270,
+      "estimated_tokens": 654,
+      "tool_input_tokens": 113129,
+      "requests": 28,
+      "tools": {
+        "bash": {
+          "calls": 37,
+          "input_tokens": 12457
+        },
+        "read": {
+          "calls": 22,
+          "input_tokens": 100672
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T20:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 2158910,
+      "output_tokens": 9310,
+      "estimated_tokens": 1015,
+      "tool_input_tokens": 48842,
+      "requests": 42,
+      "tools": {
+        "read": {
+          "calls": 16,
+          "input_tokens": 33092
+        },
+        "edit": {
+          "calls": 10,
+          "input_tokens": 2238
+        },
+        "grep": {
+          "calls": 5,
+          "input_tokens": 2727
+        },
+        "bash": {
+          "calls": 5,
+          "input_tokens": 1351
+        },
+        "todowrite": {
+          "calls": 2,
+          "input_tokens": 1090
+        },
+        "write": {
+          "calls": 1,
+          "input_tokens": 359
+        },
+        "task": {
+          "calls": 3,
+          "input_tokens": 1359
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 154
+        },
+        "background_output": {
+          "calls": 5,
+          "input_tokens": 5870
+        },
+        "question": {
+          "calls": 2,
+          "input_tokens": 602
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T21:00:00Z",
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
+      "input_tokens": 1995538,
+      "output_tokens": 49390,
+      "estimated_tokens": 4322,
+      "tool_input_tokens": 285692,
+      "requests": 74,
+      "tools": {
+        "read": {
+          "calls": 63,
+          "input_tokens": 228330
+        },
+        "bash": {
+          "calls": 14,
+          "input_tokens": 13459
+        },
+        "todowrite": {
+          "calls": 7,
+          "input_tokens": 1384
+        },
+        "write": {
+          "calls": 3,
+          "input_tokens": 1348
+        },
+        "task": {
+          "calls": 9,
+          "input_tokens": 41061
+        },
+        "edit": {
+          "calls": 1,
+          "input_tokens": 110
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T21:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 3089344,
+      "output_tokens": 22000,
+      "estimated_tokens": 16386,
+      "tool_input_tokens": 185466,
+      "requests": 147,
+      "tools": {
+        "sequential-thinking_sequentialthinking": {
+          "calls": 4,
+          "input_tokens": 1866
+        },
+        "glob": {
+          "calls": 4,
+          "input_tokens": 1048
+        },
+        "read": {
+          "calls": 36,
+          "input_tokens": 132491
+        },
+        "bash": {
+          "calls": 25,
+          "input_tokens": 13090
+        },
+        "todowrite": {
+          "calls": 54,
+          "input_tokens": 22206
+        },
+        "edit": {
+          "calls": 18,
+          "input_tokens": 5149
+        },
+        "write": {
+          "calls": 3,
+          "input_tokens": 2215
+        },
+        "filesystem_create_directory": {
+          "calls": 1,
+          "input_tokens": 37
+        },
+        "lsp_diagnostics": {
+          "calls": 3,
+          "input_tokens": 1197
+        },
+        "filesystem_read_multiple_files": {
+          "calls": 1,
+          "input_tokens": 6167
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T21:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 1195001,
+      "output_tokens": 10176,
+      "estimated_tokens": 888,
+      "tool_input_tokens": 196604,
+      "requests": 34,
+      "tools": {
+        "read": {
+          "calls": 50,
+          "input_tokens": 192224
+        },
+        "glob": {
+          "calls": 8,
+          "input_tokens": 1884
+        },
+        "grep": {
+          "calls": 7,
+          "input_tokens": 2496
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T21:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 262500,
+      "output_tokens": 5393,
+      "estimated_tokens": 317,
+      "tool_input_tokens": 35033,
+      "requests": 13,
+      "tools": {
+        "bash": {
+          "calls": 18,
+          "input_tokens": 5369
+        },
+        "read": {
+          "calls": 9,
+          "input_tokens": 29664
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T21:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 3519917,
+      "output_tokens": 24053,
+      "estimated_tokens": 342,
+      "tool_input_tokens": 47417,
+      "requests": 53,
+      "tools": {
+        "edit": {
+          "calls": 21,
+          "input_tokens": 16915
+        },
+        "read": {
+          "calls": 20,
+          "input_tokens": 16639
+        },
+        "task": {
+          "calls": 5,
+          "input_tokens": 4071
+        },
+        "background_output": {
+          "calls": 1,
+          "input_tokens": 4245
+        },
+        "write": {
+          "calls": 2,
+          "input_tokens": 2765
+        },
+        "todowrite": {
+          "calls": 6,
+          "input_tokens": 2630
+        },
+        "question": {
+          "calls": 1,
+          "input_tokens": 116
+        },
+        "bash": {
+          "calls": 1,
+          "input_tokens": 36
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T22:00:00Z",
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
+      "input_tokens": 3431066,
+      "output_tokens": 81574,
+      "estimated_tokens": 463,
+      "tool_input_tokens": 486470,
+      "requests": 106,
+      "tools": {
+        "bash": {
+          "calls": 48,
+          "input_tokens": 38267
+        },
+        "grep": {
+          "calls": 1,
+          "input_tokens": 8423
+        },
+        "glob": {
+          "calls": 5,
+          "input_tokens": 2128
+        },
+        "read": {
+          "calls": 50,
+          "input_tokens": 407820
+        },
+        "todowrite": {
+          "calls": 9,
+          "input_tokens": 3388
+        },
+        "task": {
+          "calls": 5,
+          "input_tokens": 26216
+        },
+        "edit": {
+          "calls": 1,
+          "input_tokens": 228
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T22:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 65970972,
+      "output_tokens": 137811,
+      "estimated_tokens": 3227,
+      "tool_input_tokens": 334001,
+      "requests": 666,
+      "tools": {
+        "edit": {
+          "calls": 489,
+          "input_tokens": 145984
+        },
+        "lsp_diagnostics": {
+          "calls": 1,
+          "input_tokens": 216
+        },
+        "read": {
+          "calls": 84,
+          "input_tokens": 124022
+        },
+        "todowrite": {
+          "calls": 9,
+          "input_tokens": 2829
+        },
+        "filesystem_read_multiple_files": {
+          "calls": 1,
+          "input_tokens": 16916
+        },
+        "bash": {
+          "calls": 76,
+          "input_tokens": 22109
+        },
+        "write": {
+          "calls": 3,
+          "input_tokens": 21925
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T22:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 159140,
+      "output_tokens": 5819,
+      "estimated_tokens": 1399,
+      "tool_input_tokens": 31877,
+      "requests": 6,
+      "tools": {
+        "read": {
+          "calls": 4,
+          "input_tokens": 26756
+        },
+        "grep": {
+          "calls": 3,
+          "input_tokens": 5121
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T22:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 104545,
+      "output_tokens": 5104,
+      "estimated_tokens": 2769,
+      "tool_input_tokens": 39890,
+      "requests": 6,
+      "tools": {
+        "read": {
+          "calls": 3,
+          "input_tokens": 37458
+        },
+        "grep": {
+          "calls": 5,
+          "input_tokens": 2201
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 231
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T23:00:00Z",
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
+      "input_tokens": 4166079,
+      "output_tokens": 77307,
+      "estimated_tokens": 1699,
+      "tool_input_tokens": 388221,
+      "requests": 142,
+      "tools": {
+        "read": {
+          "calls": 55,
+          "input_tokens": 348273
+        },
+        "bash": {
+          "calls": 75,
+          "input_tokens": 36016
+        },
+        "todowrite": {
+          "calls": 6,
+          "input_tokens": 2305
+        },
+        "edit": {
+          "calls": 4,
+          "input_tokens": 1008
+        },
+        "glob": {
+          "calls": 3,
+          "input_tokens": 619
+        }
+      }
+    },
+    {
+      "hour": "2026-03-15T23:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 29666666,
+      "output_tokens": 17418,
+      "estimated_tokens": 1457,
+      "tool_input_tokens": 77415,
+      "requests": 152,
+      "tools": {
+        "edit": {
+          "calls": 89,
+          "input_tokens": 20169
+        },
+        "bash": {
+          "calls": 31,
+          "input_tokens": 7531
+        },
+        "read": {
+          "calls": 31,
+          "input_tokens": 49715
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T00:00:00Z",
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
+      "input_tokens": 4676472,
+      "output_tokens": 67396,
+      "estimated_tokens": 176,
+      "tool_input_tokens": 213554,
+      "requests": 153,
+      "tools": {
+        "bash": {
+          "calls": 112,
+          "input_tokens": 62434
+        },
+        "read": {
+          "calls": 37,
+          "input_tokens": 141020
+        },
+        "todowrite": {
+          "calls": 7,
+          "input_tokens": 1874
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 204
+        },
+        "edit": {
+          "calls": 10,
+          "input_tokens": 4513
+        },
+        "task": {
+          "calls": 1,
+          "input_tokens": 3509
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T00:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 1405,
+      "output_tokens": 0,
+      "estimated_tokens": 1405,
+      "tool_input_tokens": 0,
+      "requests": 1,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-16T01:00:00Z",
+      "provider": "github-copilot",
+      "model": "claude-sonnet-4.6",
+      "input_tokens": 1646916,
+      "output_tokens": 31638,
+      "estimated_tokens": 88,
+      "tool_input_tokens": 97708,
+      "requests": 53,
+      "tools": {
+        "bash": {
+          "calls": 39,
+          "input_tokens": 17879
+        },
+        "read": {
+          "calls": 17,
+          "input_tokens": 63278
+        },
+        "todowrite": {
+          "calls": 4,
+          "input_tokens": 555
+        },
+        "task": {
+          "calls": 4,
+          "input_tokens": 15133
+        },
+        "grep": {
+          "calls": 2,
+          "input_tokens": 149
+        },
+        "edit": {
+          "calls": 2,
+          "input_tokens": 714
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T01:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 3714,
+      "output_tokens": 0,
+      "estimated_tokens": 3714,
+      "tool_input_tokens": 0,
+      "requests": 3,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-16T01:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 2888781,
+      "output_tokens": 12549,
+      "estimated_tokens": 3038,
+      "tool_input_tokens": 57898,
+      "requests": 73,
+      "tools": {
+        "read": {
+          "calls": 10,
+          "input_tokens": 31129
+        },
+        "todowrite": {
+          "calls": 6,
+          "input_tokens": 1946
+        },
+        "edit": {
+          "calls": 5,
+          "input_tokens": 904
+        },
+        "bash": {
+          "calls": 47,
+          "input_tokens": 18406
+        },
+        "grep": {
+          "calls": 2,
+          "input_tokens": 3209
+        },
+        "write": {
+          "calls": 2,
+          "input_tokens": 2304
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T10:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 152608,
+      "output_tokens": 1846,
+      "estimated_tokens": 157,
+      "tool_input_tokens": 36936,
+      "requests": 6,
+      "tools": {
+        "glob": {
+          "calls": 2,
+          "input_tokens": 73
+        },
+        "grep": {
+          "calls": 9,
+          "input_tokens": 1193
+        },
+        "read": {
+          "calls": 6,
+          "input_tokens": 35670
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T10:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 323294,
+      "output_tokens": 3462,
+      "estimated_tokens": 3626,
+      "tool_input_tokens": 16780,
+      "requests": 18,
+      "tools": {
+        "task": {
+          "calls": 1,
+          "input_tokens": 349
+        },
+        "grep": {
+          "calls": 3,
+          "input_tokens": 472
+        },
+        "glob": {
+          "calls": 2,
+          "input_tokens": 56
+        },
+        "read": {
+          "calls": 4,
+          "input_tokens": 14269
+        },
+        "todowrite": {
+          "calls": 4,
+          "input_tokens": 752
+        },
+        "edit": {
+          "calls": 3,
+          "input_tokens": 618
+        },
+        "bash": {
+          "calls": 2,
+          "input_tokens": 205
+        },
+        "background_cancel": {
+          "calls": 1,
+          "input_tokens": 59
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T11:00:00Z",
+      "provider": "github-copilot",
+      "model": "claude-haiku-4.5",
+      "input_tokens": 1558,
+      "output_tokens": 0,
+      "estimated_tokens": 1558,
+      "tool_input_tokens": 0,
+      "requests": 3,
+      "tools": {}
+    },
+    {
+      "hour": "2026-03-16T11:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 40861,
+      "output_tokens": 399,
+      "estimated_tokens": 1762,
+      "tool_input_tokens": 1104,
+      "requests": 5,
+      "tools": {
+        "sequential-thinking_sequentialthinking": {
+          "calls": 1,
+          "input_tokens": 352
+        },
+        "web-search_brave_web_search": {
+          "calls": 5,
+          "input_tokens": 752
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T11:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 518534,
+      "output_tokens": 12450,
+      "estimated_tokens": 937,
+      "tool_input_tokens": 115714,
+      "requests": 32,
+      "tools": {
+        "glob": {
+          "calls": 24,
+          "input_tokens": 6414
+        },
+        "read": {
+          "calls": 29,
+          "input_tokens": 72397
+        },
+        "bash": {
+          "calls": 37,
+          "input_tokens": 36903
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T11:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 3835297,
+      "output_tokens": 34581,
+      "estimated_tokens": 8575,
+      "tool_input_tokens": 171837,
+      "requests": 98,
+      "tools": {
+        "task": {
+          "calls": 7,
+          "input_tokens": 9445
+        },
+        "read": {
+          "calls": 53,
+          "input_tokens": 83265
+        },
+        "glob": {
+          "calls": 9,
+          "input_tokens": 4215
+        },
+        "filesystem_list_directory": {
+          "calls": 1,
+          "input_tokens": 113
+        },
+        "background_output": {
+          "calls": 10,
+          "input_tokens": 3054
+        },
+        "todowrite": {
+          "calls": 6,
+          "input_tokens": 3916
+        },
+        "background_cancel": {
+          "calls": 2,
+          "input_tokens": 132
+        },
+        "edit": {
+          "calls": 31,
+          "input_tokens": 5218
+        },
+        "write": {
+          "calls": 9,
+          "input_tokens": 10176
+        },
+        "bash": {
+          "calls": 31,
+          "input_tokens": 50658
+        },
+        "grep": {
+          "calls": 1,
+          "input_tokens": 237
+        },
+        "call_omo_agent": {
+          "calls": 4,
+          "input_tokens": 1408
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T12:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 49005,
+      "output_tokens": 908,
+      "estimated_tokens": 0,
+      "tool_input_tokens": 3971,
+      "requests": 2,
+      "tools": {
+        "read": {
+          "calls": 1,
+          "input_tokens": 3971
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T12:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 2137776,
+      "output_tokens": 5680,
+      "estimated_tokens": 3616,
+      "tool_input_tokens": 18260,
+      "requests": 29,
+      "tools": {
+        "bash": {
+          "calls": 17,
+          "input_tokens": 7434
+        },
+        "read": {
+          "calls": 24,
+          "input_tokens": 8607
+        },
+        "edit": {
+          "calls": 17,
+          "input_tokens": 2219
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T13:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 10943468,
+      "output_tokens": 39011,
+      "estimated_tokens": 51,
+      "tool_input_tokens": 192811,
+      "requests": 122,
+      "tools": {
+        "todowrite": {
+          "calls": 12,
+          "input_tokens": 4074
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 57
+        },
+        "skill": {
+          "calls": 3,
+          "input_tokens": 13659
+        },
+        "glob": {
+          "calls": 9,
+          "input_tokens": 1926
+        },
+        "grep": {
+          "calls": 12,
+          "input_tokens": 4776
+        },
+        "task": {
+          "calls": 3,
+          "input_tokens": 2367
+        },
+        "read": {
+          "calls": 25,
+          "input_tokens": 79015
+        },
+        "background_output": {
+          "calls": 2,
+          "input_tokens": 902
+        },
+        "apply_patch": {
+          "calls": 34,
+          "input_tokens": 21885
+        },
+        "lsp_diagnostics": {
+          "calls": 39,
+          "input_tokens": 1412
+        },
+        "bash": {
+          "calls": 22,
+          "input_tokens": 62631
+        },
+        "background_cancel": {
+          "calls": 2,
+          "input_tokens": 107
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T13:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 214176,
+      "output_tokens": 6829,
+      "estimated_tokens": 299,
+      "tool_input_tokens": 36586,
+      "requests": 10,
+      "tools": {
+        "todowrite": {
+          "calls": 3,
+          "input_tokens": 614
+        },
+        "skill_use": {
+          "calls": 1,
+          "input_tokens": 41
+        },
+        "skill": {
+          "calls": 3,
+          "input_tokens": 4009
+        },
+        "read": {
+          "calls": 9,
+          "input_tokens": 30218
+        },
+        "grep": {
+          "calls": 3,
+          "input_tokens": 1704
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T13:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 132590,
+      "output_tokens": 1527,
+      "estimated_tokens": 82,
+      "tool_input_tokens": 30794,
+      "requests": 7,
+      "tools": {
+        "bash": {
+          "calls": 11,
+          "input_tokens": 3635
+        },
+        "grep": {
+          "calls": 2,
+          "input_tokens": 221
+        },
+        "read": {
+          "calls": 9,
+          "input_tokens": 26938
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T13:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 1317329,
+      "output_tokens": 3092,
+      "estimated_tokens": 0,
+      "tool_input_tokens": 7183,
+      "requests": 15,
+      "tools": {
+        "read": {
+          "calls": 14,
+          "input_tokens": 4879
+        },
+        "edit": {
+          "calls": 11,
+          "input_tokens": 1160
+        },
+        "bash": {
+          "calls": 11,
+          "input_tokens": 1144
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T14:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 205895,
+      "output_tokens": 4213,
+      "estimated_tokens": 92,
+      "tool_input_tokens": 12539,
+      "requests": 10,
+      "tools": {
+        "sequential-thinking_sequentialthinking": {
+          "calls": 5,
+          "input_tokens": 2552
+        },
+        "web-search_brave_web_search": {
+          "calls": 2,
+          "input_tokens": 49
+        },
+        "context7_resolve-library-id": {
+          "calls": 3,
+          "input_tokens": 652
+        },
+        "context7_query-docs": {
+          "calls": 3,
+          "input_tokens": 4257
+        },
+        "websearch_web_search_exa": {
+          "calls": 1,
+          "input_tokens": 2360
+        },
+        "grep_app_searchGitHub": {
+          "calls": 1,
+          "input_tokens": 2669
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T14:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 6399984,
+      "output_tokens": 23326,
+      "estimated_tokens": 553,
+      "tool_input_tokens": 86465,
+      "requests": 49,
+      "tools": {
+        "todowrite": {
+          "calls": 5,
+          "input_tokens": 1346
+        },
+        "task": {
+          "calls": 5,
+          "input_tokens": 4844
+        },
+        "grep": {
+          "calls": 3,
+          "input_tokens": 5909
+        },
+        "read": {
+          "calls": 8,
+          "input_tokens": 22111
+        },
+        "background_output": {
+          "calls": 4,
+          "input_tokens": 2674
+        },
+        "background_cancel": {
+          "calls": 2,
+          "input_tokens": 128
+        },
+        "apply_patch": {
+          "calls": 12,
+          "input_tokens": 11757
+        },
+        "lsp_diagnostics": {
+          "calls": 6,
+          "input_tokens": 224
+        },
+        "bash": {
+          "calls": 10,
+          "input_tokens": 37472
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T14:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "input_tokens": 442576,
+      "output_tokens": 16698,
+      "estimated_tokens": 497,
+      "tool_input_tokens": 72359,
+      "requests": 19,
+      "tools": {
+        "skill_use": {
+          "calls": 2,
+          "input_tokens": 72
+        },
+        "read": {
+          "calls": 10,
+          "input_tokens": 54094
+        },
+        "grep": {
+          "calls": 8,
+          "input_tokens": 7467
+        },
+        "bash": {
+          "calls": 1,
+          "input_tokens": 7370
+        },
+        "todowrite": {
+          "calls": 4,
+          "input_tokens": 1076
+        },
+        "skill": {
+          "calls": 2,
+          "input_tokens": 2168
+        },
+        "glob": {
+          "calls": 1,
+          "input_tokens": 112
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T14:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-4.7-flash",
+      "input_tokens": 52512,
+      "output_tokens": 868,
+      "estimated_tokens": 172,
+      "tool_input_tokens": 24923,
+      "requests": 5,
+      "tools": {
+        "bash": {
+          "calls": 4,
+          "input_tokens": 984
+        },
+        "grep": {
+          "calls": 1,
+          "input_tokens": 229
+        },
+        "read": {
+          "calls": 5,
+          "input_tokens": 23710
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T15:00:00Z",
+      "provider": "google",
+      "model": "gemini-3-flash-preview",
+      "input_tokens": 334990,
+      "output_tokens": 422,
+      "estimated_tokens": 0,
+      "tool_input_tokens": 101091,
+      "requests": 4,
+      "tools": {
+        "websearch_web_search_exa": {
+          "calls": 9,
+          "input_tokens": 17026
+        },
+        "webfetch": {
+          "calls": 8,
+          "input_tokens": 84065
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T15:00:00Z",
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "input_tokens": 5444041,
+      "output_tokens": 21859,
+      "estimated_tokens": 77,
+      "tool_input_tokens": 129481,
+      "requests": 54,
+      "tools": {
+        "todowrite": {
+          "calls": 11,
+          "input_tokens": 3322
+        },
+        "apply_patch": {
+          "calls": 12,
+          "input_tokens": 9365
+        },
+        "grep": {
+          "calls": 8,
+          "input_tokens": 3138
+        },
+        "read": {
+          "calls": 11,
+          "input_tokens": 61886
+        },
+        "lsp_diagnostics": {
+          "calls": 10,
+          "input_tokens": 372
+        },
+        "bash": {
+          "calls": 15,
+          "input_tokens": 51398
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T18:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 927821,
+      "output_tokens": 6996,
+      "estimated_tokens": 3710,
+      "tool_input_tokens": 50257,
+      "requests": 27,
+      "tools": {
+        "bash": {
+          "calls": 26,
+          "input_tokens": 16643
+        },
+        "chrome-devtools_navigate_page": {
+          "calls": 2,
+          "input_tokens": 127
+        },
+        "chrome-devtools_take_snapshot": {
+          "calls": 1,
+          "input_tokens": 2413
+        },
+        "read": {
+          "calls": 10,
+          "input_tokens": 29457
+        },
+        "grep": {
+          "calls": 1,
+          "input_tokens": 591
+        },
+        "chrome-devtools_list_console_messages": {
+          "calls": 1,
+          "input_tokens": 81
+        },
+        "chrome-devtools_get_console_message": {
+          "calls": 2,
+          "input_tokens": 61
+        },
+        "chrome-devtools_list_network_requests": {
+          "calls": 2,
+          "input_tokens": 768
+        },
+        "todowrite": {
+          "calls": 2,
+          "input_tokens": 116
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T19:00:00Z",
+      "provider": "google",
+      "model": "gemini-3.1-pro-preview",
+      "input_tokens": 460348,
+      "output_tokens": 1866,
+      "estimated_tokens": 429,
+      "tool_input_tokens": 44337,
+      "requests": 7,
+      "tools": {
+        "todowrite": {
+          "calls": 3,
+          "input_tokens": 729
+        },
+        "read": {
+          "calls": 3,
+          "input_tokens": 42093
+        },
+        "edit": {
+          "calls": 3,
+          "input_tokens": 1482
+        },
+        "bash": {
+          "calls": 1,
+          "input_tokens": 33
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T19:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 11209908,
+      "output_tokens": 33173,
+      "estimated_tokens": 4536,
+      "tool_input_tokens": 220864,
+      "requests": 183,
+      "tools": {
+        "write": {
+          "calls": 1,
+          "input_tokens": 3462
+        },
+        "bash": {
+          "calls": 52,
+          "input_tokens": 25036
+        },
+        "chrome-devtools_navigate_page": {
+          "calls": 4,
+          "input_tokens": 182
+        },
+        "chrome-devtools_take_snapshot": {
+          "calls": 19,
+          "input_tokens": 7929
+        },
+        "chrome-devtools_list_console_messages": {
+          "calls": 5,
+          "input_tokens": 1105
+        },
+        "chrome-devtools_take_screenshot": {
+          "calls": 1,
+          "input_tokens": 13
+        },
+        "chrome-devtools_get_console_message": {
+          "calls": 3,
+          "input_tokens": 343
+        },
+        "read": {
+          "calls": 55,
+          "input_tokens": 158020
+        },
+        "chrome-devtools_list_network_requests": {
+          "calls": 4,
+          "input_tokens": 2241
+        },
+        "chrome-devtools_fill": {
+          "calls": 8,
+          "input_tokens": 174
+        },
+        "chrome-devtools_click": {
+          "calls": 13,
+          "input_tokens": 184
+        },
+        "chrome-devtools_fill_form": {
+          "calls": 1,
+          "input_tokens": 37
+        },
+        "glob": {
+          "calls": 5,
+          "input_tokens": 5255
+        },
+        "task": {
+          "calls": 4,
+          "input_tokens": 2998
+        },
+        "todowrite": {
+          "calls": 13,
+          "input_tokens": 7238
+        },
+        "edit": {
+          "calls": 19,
+          "input_tokens": 3792
+        },
+        "background_output": {
+          "calls": 1,
+          "input_tokens": 910
+        },
+        "grep": {
+          "calls": 7,
+          "input_tokens": 1945
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T20:00:00Z",
+      "provider": "zai-coding-plan",
+      "model": "glm-5",
+      "input_tokens": 3281065,
+      "output_tokens": 4523,
+      "estimated_tokens": 0,
+      "tool_input_tokens": 14301,
+      "requests": 38,
+      "tools": {
+        "chrome-devtools_take_snapshot": {
+          "calls": 11,
+          "input_tokens": 7717
+        },
+        "chrome-devtools_click": {
+          "calls": 9,
+          "input_tokens": 108
+        },
+        "bash": {
+          "calls": 14,
+          "input_tokens": 3430
+        },
+        "chrome-devtools_fill": {
+          "calls": 1,
+          "input_tokens": 17
+        },
+        "chrome-devtools_press_key": {
+          "calls": 1,
+          "input_tokens": 10
+        },
+        "chrome-devtools_list_console_messages": {
+          "calls": 1,
+          "input_tokens": 103
+        },
+        "write": {
+          "calls": 1,
+          "input_tokens": 2916
+        }
+      }
+    },
+    {
+      "hour": "2026-03-16T22:00:00Z",
+      "provider": "kimi-for-coding",
+      "model": "k2p5",
+      "input_tokens": 396918,
+      "output_tokens": 3506,
+      "estimated_tokens": 3611,
+      "tool_input_tokens": 28407,
+      "requests": 16,
+      "tools": {
+        "read": {
+          "calls": 8,
+          "input_tokens": 18580
+        },
+        "glob": {
+          "calls": 4,
+          "input_tokens": 5221
+        },
+        "grep": {
+          "calls": 2,
+          "input_tokens": 995
+        },
+        "bash": {
+          "calls": 7,
+          "input_tokens": 1558
+        },
+        "todowrite": {
+          "calls": 4,
+          "input_tokens": 1160
+        },
+        "edit": {
+          "calls": 3,
+          "input_tokens": 605
+        },
+        "write": {
+          "calls": 1,
+          "input_tokens": 288
+        }
+      }
+    }
+  ]
+}
