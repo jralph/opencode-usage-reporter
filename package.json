@@ -1,0 +1,24 @@
+{
+  "name": "opencode-usage-reporter",
+  "version": "1.0.0",
+  "description": "A zero-dependency Node.js CLI that reads your local [OpenCode](https://github.com/opencode-ai/opencode) session data and generates token usage reports broken down by provider and model.",
+  "main": "report-opencode-usage.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jralph/opencode-usage-reporter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jralph/opencode-usage-reporter/issues"
+  },
+  "homepage": "https://github.com/jralph/opencode-usage-reporter#readme",
+  "dependencies": {
+    "@anthropic-ai/tokenizer": "^0.0.4"
+  }
+}
