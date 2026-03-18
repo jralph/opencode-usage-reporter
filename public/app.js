@@ -622,7 +622,7 @@ function renderSessions() {
     const hasDetail = (s.agents && Object.keys(s.agents).length > 0) || (s.tool_timeline && s.tool_timeline.length > 0);
     const toolCalls = s.tool_calls || 0;
     return `<tr class="${hasDetail ? 'session-detail' : ''}" ${hasDetail ? `onclick="toggleSessionDetail(${idx})"` : ''}>
-      <td title="${s.session_id||''}">${s.session_title || s.session_id?.slice(0,8) || '\u2014'}</td>
+      <td>${s.session_title || s.session_id?.slice(0,8) || '\u2014'}</td>
       <td><span class="${badgeClass(s.provider)}">${s.provider}</span></td>
       <td>${s.model}</td>
       <td class="num">${fmt(total)}</td>
@@ -770,14 +770,25 @@ function renderFlameChartSVG(events, width) {
   const maxT = Math.max(...events.map(e => e.end));
   const range = maxT - minT || 1;
 
-  // Group overlapping events into rows
-  const rows = [];
-  for (const e of events) {
-    let placed = false;
-    for (const row of rows) {
-      if (row.every(r => e.start >= r.end || e.end <= r.start)) { row.push(e); placed = true; break; }
+  // Check if events have depth info (hierarchical) or need overlap-avoidance
+  const hasDepth = events.some(e => e.depth > 0);
+
+  let rows;
+  if (hasDepth) {
+    // Group by depth level — each depth is its own row
+    const maxDepth = Math.max(...events.map(e => e.depth || 0));
+    rows = Array.from({ length: maxDepth + 1 }, () => []);
+    for (const e of events) rows[e.depth || 0].push(e);
+  } else {
+    // Fallback: pack by overlap avoidance
+    rows = [];
+    for (const e of events) {
+      let placed = false;
+      for (const row of rows) {
+        if (row.every(r => e.start >= r.end || e.end <= r.start)) { row.push(e); placed = true; break; }
+      }
+      if (!placed) rows.push([e]);
     }
-    if (!placed) rows.push([e]);
   }
 
   const rowH = 20, pad = 2, w = width || 800;
@@ -786,6 +797,14 @@ function renderFlameChartSVG(events, width) {
   let colorIdx = 0;
 
   let svg = `<svg class="flame-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`;
+  // Depth labels when hierarchical
+  if (hasDepth) {
+    const labels = ['orchestrator', 'task', 'subtask', 'tool'];
+    rows.forEach((_, ri) => {
+      const label = labels[ri] || `depth ${ri}`;
+      svg += `<text x="2" y="${ri * (rowH + pad) + 14}" fill="var(--text2)" font-size="9" opacity="0.6">${label}</text>`;
+    });
+  }
   // Time axis
   svg += `<line x1="0" y1="${h-20}" x2="${w}" y2="${h-20}" stroke="var(--border)"/>`;
   const durSec = Math.round(range / 1000);
@@ -805,8 +824,9 @@ function renderFlameChartSVG(events, width) {
       const ew = Math.max(((e.end - e.start) / range) * w, 3);
       const dur = e.end - e.start;
       const durLabel = dur > 1000 ? (dur/1000).toFixed(1)+'s' : dur+'ms';
-      svg += `<rect x="${x}" y="${y}" width="${ew}" height="${rowH}" fill="${toolColors[e.tool]}" rx="2"><title>${e.tool} (${durLabel}, ${e.tokens||0} tok)</title></rect>`;
-      if (ew > 50) svg += `<text x="${x+3}" y="${y+14}" fill="#fff" font-size="10">${e.tool.length > ew/6 ? e.tool.slice(0,Math.floor(ew/6))+'…' : e.tool}</text>`;
+      const label = e.title || e.tool;
+      svg += `<rect x="${x}" y="${y}" width="${ew}" height="${rowH}" fill="${toolColors[e.tool]}" rx="2" opacity="${0.9 - (e.depth||0) * 0.1}"><title>${label} (${durLabel}${e.tokens ? ', '+e.tokens+' tok' : ''})</title></rect>`;
+      if (ew > 50) svg += `<text x="${x+3}" y="${y+14}" fill="#fff" font-size="10">${label.length > ew/6 ? label.slice(0,Math.floor(ew/6))+'…' : label}</text>`;
     }
   });
 
