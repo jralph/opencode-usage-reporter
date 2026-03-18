@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OpenCode Analytics</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -20,6 +21,15 @@
     <a href="#/files" class="nav-link" data-page="files" id="nav-files" style="display:none">Files</a>
   </div>
   <select id="report-select" class="report-select"></select>
+  <select id="provider-select" class="report-select"></select>
+  <div class="export-dropdown">
+    <button class="export-btn" onclick="document.querySelector('.export-menu').classList.toggle('open')">⬇ Export</button>
+    <div class="export-menu">
+      <a onclick="exportReport('json')">JSON</a>
+      <a onclick="exportReport('html')">HTML</a>
+      <a onclick="exportReport('pdf')">PDF</a>
+    </div>
+  </div>
 </nav>
 <main id="app"></main>
 <script src="/app.js"></script>

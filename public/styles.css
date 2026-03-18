@@ -93,3 +93,14 @@ th.num { text-align: right; }
 /* Session detail modal */
 .session-detail { cursor: pointer; }
 .session-detail:hover td { background: rgba(108,92,231,0.1) !important; }
+
+/* Export dropdown */
+.export-dropdown { position: relative; }
+.export-btn { background: var(--accent); color: #fff; border: none; padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.export-btn:hover { opacity: 0.85; }
+.export-menu { display: none; position: absolute; right: 0; top: 110%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; min-width: 100px; z-index: 200; }
+.export-menu.open { display: block; }
+.export-menu a { display: block; padding: 0.5rem 1rem; color: var(--text); font-size: 0.8rem; cursor: pointer; text-decoration: none; }
+.export-menu a:hover { background: var(--accent); color: #fff; }
+.export-progress { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 2rem 3rem; z-index: 1000; text-align: center; font-size: 0.9rem; }
+.export-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }

@@ -3,6 +3,7 @@
 let reports = [];
 let allReportData = [];
 let currentReport = null;
+let selectedProvider = null;
 let charts = {};
 let pricing = {};
 
@@ -16,6 +17,34 @@ const badgeClass = p => 'badge badge-' + (['github-copilot','openai','google','a
 const COLORS = ['#6c5ce7','#74b9ff','#00b894','#e17055','#fdcb6e','#a29bfe','#55efc4','#fab1a0','#81ecec','#ffeaa7','#dfe6e9','#636e72'];
 
 function destroyCharts() { Object.values(charts).forEach(c => c.destroy()); charts = {}; }
+
+function updateProviderDropdown() {
+  const sel = $('#provider-select');
+  const providers = [...new Set((currentReport?.model_totals || []).map(m => m.provider))].sort();
+  sel.innerHTML = '<option value="">All Providers</option>' + providers.map(p => `<option value="${p}"${p === selectedProvider ? ' selected' : ''}>${p}</option>`).join('');
+  sel.onchange = () => { selectedProvider = sel.value || null; route(); };
+}
+
+function getFilteredReport() {
+  const r = currentReport;
+  if (!r || !selectedProvider) return r;
+  const p = selectedProvider;
+  const modelTotals = (r.model_totals || []).filter(m => m.provider === p);
+  const totals = { input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, requests: 0 };
+  modelTotals.forEach(m => { for (const k in totals) totals[k] += m[k] || 0; });
+  const usage = r.usage?.filter(u => u.provider === p);
+  const sessions = r.sessions?.filter(s => s.provider === p);
+  // Recompute tool_totals from filtered usage/sessions
+  const toolMap = {};
+  const addTools = (src) => { if (!src) return; src.forEach(u => { if (!u.tools) return; Object.entries(u.tools).forEach(([t, v]) => { if (!toolMap[t]) toolMap[t] = { tool: t, calls: 0, input_tokens: 0, output_tokens: 0 }; if (typeof v === 'object') { toolMap[t].calls += v.calls || 0; toolMap[t].input_tokens += v.input_tokens || 0; } }); }); };
+  addTools(usage);
+  if (!usage?.length && sessions?.length) {
+    // For session reports without per-row tools, fall back to original tool_totals (can't filter)
+    (r.tool_totals || []).forEach(t => { toolMap[t.tool] = { ...t }; });
+  }
+  const toolTotals = Object.values(toolMap).sort((a, b) => b.input_tokens - a.input_tokens);
+  return { ...r, totals, model_totals: modelTotals, tool_totals: toolTotals.length ? toolTotals : r.tool_totals, usage, sessions, warnings: r.warnings };
+}
 
 Chart.defaults.color = '#8b8fa8';
 Chart.defaults.borderColor = '#2e3348';
@@ -110,6 +139,7 @@ function selectReportDirect(data) {
   currentReport = data;
   const navFiles = document.getElementById('nav-files');
   if (navFiles) navFiles.style.display = data.file_stats ? '' : 'none';
+  updateProviderDropdown();
   route();
 }
 
@@ -158,7 +188,7 @@ function totalsRow(cols) {
 
 /* ── Dashboard Page ── */
 function renderDashboard() {
-  const r = currentReport;
+  const r = getFilteredReport();
   const t = r.totals;
   const totalTokens = t.input_tokens + t.output_tokens;
   const avgPerReq = t.requests ? Math.round(totalTokens / t.requests) : 0;
@@ -258,7 +288,7 @@ function renderDashboardCharts(r) {
 
 /* ── Models Page ── */
 function renderModels() {
-  const r = currentReport;
+  const r = getFilteredReport();
   const models = (r.model_totals || []).sort((a,b) => (b.input_tokens+b.output_tokens) - (a.input_tokens+a.output_tokens));
 
   // Compute totals for footer
@@ -340,7 +370,7 @@ function renderModels() {
 
 /* ── Tools Page ── */
 function renderTools() {
-  const r = currentReport;
+  const r = getFilteredReport();
   const tools = [...(r.tool_totals || [])].sort((a,b) => b.input_tokens - a.input_tokens);
   const totalToolTokens = tools.reduce((s,t) => s + t.input_tokens, 0);
   const totalCalls = tools.reduce((s,t) => s + t.calls, 0);
@@ -427,7 +457,7 @@ function renderTools() {
 
 /* ── Timeline Page ── */
 function renderTimeline() {
-  const r = currentReport;
+  const r = getFilteredReport();
   const usage = r.usage || [];
 
   if (!usage.length) {
@@ -596,7 +626,7 @@ function renderTimeline() {
 
 /* ── Sessions Page ── */
 function renderSessions() {
-  const r = currentReport;
+  const r = getFilteredReport();
   const sessions = r.sessions || [];
 
   if (!sessions.length) {
@@ -734,7 +764,7 @@ window.toggleSessionDetail = function(idx) {
 
 /* ── Warnings Page ── */
 function renderWarnings() {
-  const r = currentReport;
+  const r = getFilteredReport();
   const warnings = r.warnings || [];
 
   if (!warnings.length) {
@@ -781,7 +811,7 @@ function renderWarnings() {
 
 /* ── Files Page ── */
 function renderFiles() {
-  const r = currentReport;
+  const r = getFilteredReport();
   const files = r.file_stats || [];
 
   if (!files.length) {
@@ -966,6 +996,167 @@ function renderAgentFlowChart(agents) {
   html += '</div>';
   return html;
 }
+
+/* ── Export ── */
+const EXPORT_PAGES = ['dashboard', 'models', 'tools', 'timeline', 'sessions', 'warnings', 'files'];
+const PAGE_RENDERERS = { dashboard: renderDashboard, models: renderModels, tools: renderTools, timeline: renderTimeline, sessions: renderSessions, warnings: renderWarnings, files: renderFiles };
+
+function showExportProgress(msg) {
+  const overlay = document.createElement('div');
+  overlay.className = 'export-overlay';
+  overlay.id = 'export-overlay';
+  const box = document.createElement('div');
+  box.className = 'export-progress';
+  box.id = 'export-progress';
+  box.textContent = msg;
+  document.body.append(overlay, box);
+}
+function hideExportProgress() {
+  document.getElementById('export-overlay')?.remove();
+  document.getElementById('export-progress')?.remove();
+}
+
+function waitForFrame() { return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
+
+async function renderAllPagesContainer() {
+  const container = document.createElement('div');
+  container.style.cssText = 'background:var(--bg);color:var(--text);padding:1.5rem;max-width:1400px';
+  const app = $('#app');
+  const savedHash = location.hash;
+  const savedHTML = app.innerHTML;
+  const pages = EXPORT_PAGES.filter(p => p !== 'files' || currentReport.file_stats);
+
+  // Disable Chart.js animations for instant rendering
+  Chart.defaults.animation = false;
+
+  // Table of contents
+  const toc = document.createElement('div');
+  toc.style.cssText = 'margin-bottom:2rem;padding:1.25rem;background:#1a1d27;border:1px solid #2e3348;border-radius:10px';
+  toc.innerHTML = `<h2 style="font-size:1.3rem;margin-bottom:0.75rem;color:#a29bfe">Contents</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem">${pages.map(p =>
+      `<a href="#export-${p}" style="color:#74b9ff;text-decoration:none;padding:0.3rem 0.75rem;background:#242836;border-radius:4px;font-size:0.85rem">${p.charAt(0).toUpperCase() + p.slice(1)}</a>`
+    ).join('')}</div>`;
+  container.appendChild(toc);
+
+  for (const page of pages) {
+    destroyCharts();
+    (PAGE_RENDERERS[page] || PAGE_RENDERERS.dashboard)();
+    // Pre-expand session details for static export
+    if (page === 'sessions' && window._sessionData) {
+      window._sessionData.forEach((s, i) => {
+        if ((s.agents && Object.keys(s.agents).length) || (s.tool_timeline && s.tool_timeline.length) || (s.files && s.files.length)) {
+          toggleSessionDetail(i);
+        }
+      });
+    }
+    // Wait for Chart.js to paint (needs 2 animation frames)
+    await waitForFrame();
+    const section = document.createElement('div');
+    section.id = `export-${page}`;
+    section.style.cssText = 'margin-bottom:2rem;page-break-after:always';
+    section.innerHTML = `<h2 style="font-size:1.3rem;margin-bottom:1rem;color:var(--accent2);border-bottom:1px solid var(--border);padding-bottom:0.5rem">${page.charAt(0).toUpperCase() + page.slice(1)}</h2>`;
+    // Convert canvases to images in-place before cloning
+    app.querySelectorAll('canvas').forEach(canvas => {
+      try {
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/png');
+        img.style.cssText = `width:${canvas.offsetWidth}px;height:${canvas.offsetHeight}px`;
+        canvas.parentNode.replaceChild(img, canvas);
+      } catch(e) {}
+    });
+    section.appendChild(app.cloneNode(true));
+    container.appendChild(section);
+  }
+
+  // Restore animations and original page
+  Chart.defaults.animation = true;
+  destroyCharts();
+  app.innerHTML = savedHTML;
+  location.hash = savedHash;
+  route();
+
+  return container;
+}
+
+async function exportReport(format) {
+  document.querySelector('.export-menu').classList.remove('open');
+  if (!currentReport) return;
+
+  if (format === 'json') {
+    const blob = new Blob([JSON.stringify(currentReport, null, 2)], { type: 'application/json' });
+    downloadBlob(blob, `opencode-report-${Date.now()}.json`);
+    return;
+  }
+
+  showExportProgress(`Generating ${format.toUpperCase()}…`);
+  await new Promise(r => setTimeout(r, 50)); // let UI paint
+
+  try {
+    if (format === 'html') {
+      const [css, js] = await Promise.all([fetch('/styles.css').then(r => r.text()), fetch('/app.js').then(r => r.text())]);
+      const reportJSON = JSON.stringify(currentReport);
+      const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenCode Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"><\/script>
+<style>${css}</style></head><body>
+<nav id="nav">
+  <div class="nav-brand">⚡ OpenCode Analytics</div>
+  <div class="nav-links">
+    <a href="#/" class="nav-link active" data-page="dashboard">Dashboard</a>
+    <a href="#/models" class="nav-link" data-page="models">Models</a>
+    <a href="#/tools" class="nav-link" data-page="tools">Tools</a>
+    <a href="#/timeline" class="nav-link" data-page="timeline">Timeline</a>
+    <a href="#/sessions" class="nav-link" data-page="sessions">Sessions</a>
+    <a href="#/warnings" class="nav-link" data-page="warnings">Warnings</a>
+    <a href="#/files" class="nav-link" data-page="files" id="nav-files" style="display:none">Files</a>
+  </div>
+</nav>
+<main id="app"></main>
+<script>
+${js.replace(/loadReports\(\);\s*$/, '')}
+// Bootstrap with embedded data
+loadReports = function() { selectReportDirect(${reportJSON}); };
+loadReports();
+<\/script></body></html>`;
+      downloadBlob(new Blob([html], { type: 'text/html' }), `opencode-report-${Date.now()}.html`);
+    } else if (format === 'pdf') {
+      const container = await renderAllPagesContainer();
+      // Cap each section height to stay within browser canvas limits
+      [...container.children].forEach(s => { s.style.maxHeight = '8000px'; s.style.overflow = 'hidden'; });
+      document.body.appendChild(container);
+      await html2pdf().set({
+        margin: [10, 10],
+        filename: `opencode-report-${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.8 },
+        html2canvas: { scale: 1, backgroundColor: '#0f1117', useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        pagebreak: { mode: ['css'], avoid: ['tr', '.card', '.chart-box'] },
+      }).from(container).save();
+      container.remove();
+    }
+  } catch (e) {
+    console.error('Export failed:', e);
+    alert('Export failed: ' + e.message);
+  } finally {
+    hideExportProgress();
+  }
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Close export menu on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.export-dropdown')) {
+    document.querySelector('.export-menu')?.classList.remove('open');
+  }
+});
 
 /* ── Init ── */
 loadReports();
