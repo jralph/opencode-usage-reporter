@@ -293,7 +293,12 @@ function gatherTokenWork(rawMessages) {
       if (inputText || outputText) {
         const id = `tool:${m.id}:${i}`;
         toolWork.push({ id, texts: [inputText, outputText].filter(Boolean) });
-        toolMeta.set(id, { msgId: m.id, tool: p.tool, hasInput: !!inputText, hasOutput: !!outputText });
+        toolMeta.set(id, {
+          msgId: m.id, tool: p.tool, hasInput: !!inputText, hasOutput: !!outputText,
+          args: p.state?.input || {},
+          start: p.state?.time?.start || null,
+          end: p.state?.time?.end || null,
+        });
       }
     }
   }
@@ -310,11 +315,20 @@ function collectUsageData(sessions, cutoff) {
   const tokenMap = tokenizeAll([...estimateWork, ...toolWork]);
 
   const toolTokensByMsg = new Map();
+  const toolEventsByMsg = new Map();
   for (const tw of toolWork) {
     const total = tokenMap.get(tw.id) || 0;
     const meta = toolMeta.get(tw.id);
     if (!toolTokensByMsg.has(meta.msgId)) toolTokensByMsg.set(meta.msgId, []);
     toolTokensByMsg.get(meta.msgId).push({ tool: meta.tool, inputTokens: meta.hasInput ? total : 0, outputTokens: meta.hasOutput && !meta.hasInput ? total : 0 });
+    if (!toolEventsByMsg.has(meta.msgId)) toolEventsByMsg.set(meta.msgId, []);
+    toolEventsByMsg.get(meta.msgId).push({
+      tool: meta.tool,
+      tokens: total,
+      start: meta.start,
+      end: meta.end,
+      args: meta.args,
+    });
   }
 
   const records = [];
@@ -334,18 +348,23 @@ function collectUsageData(sessions, cutoff) {
     }
 
     const tools = toolTokensByMsg.get(m.id) || [];
+    const toolEvents = toolEventsByMsg.get(m.id) || [];
 
     records.push({
       sessionId: session.id,
       sessionTitle: session.title || session.slug || session.id,
       directory: session.directory || null,
       created: m.time.created,
+      completed: m.time?.completed || m.time.created,
+      role: m.role,
+      agent: m.agent || m.mode || null,
       provider,
       model,
       inputTokens,
       outputTokens,
       estimated,
       tools,
+      toolEvents,
     });
   }
 
@@ -379,6 +398,148 @@ function buildModelTotals(records) {
     b.requests++;
   }
   return [...modelMap.values()].sort((a, b) => b.input_tokens - a.input_tokens);
+}
+
+// --- Warnings / waste detection ---
+
+function detectWarnings(records, toolTotals, sessionDetails) {
+  const warnings = [];
+
+  // Per-session warnings
+  for (const s of sessionDetails) {
+    // Excessive iteration: >40 requests in a session
+    if (s.requests > 40) {
+      warnings.push({ type: 'excessive_iteration', severity: 'severe', session_id: s.session_id,
+        detail: `${s.requests} requests in session "${s.session_title}". Possible thrashing or micromanagement.` });
+    }
+    // Wasted compute: >5 requests but 0 tool calls (no productive output)
+    if (s.requests > 5 && s.tool_calls === 0) {
+      warnings.push({ type: 'wasted_compute', severity: 'severe', session_id: s.session_id,
+        detail: `${s.requests} requests with zero tool calls in "${s.session_title}". Tokens burned with no tool usage.` });
+    }
+    // Low token efficiency: >50:1 total tokens to tool output tokens
+    const totalTok = s.input_tokens + s.output_tokens;
+    const toolOutTok = s.tool_output_tokens || 0;
+    if (toolOutTok > 0 && totalTok / toolOutTok > 50) {
+      warnings.push({ type: 'low_token_efficiency', severity: 'warn', session_id: s.session_id,
+        detail: `${Math.round(totalTok / toolOutTok)}:1 token ratio in "${s.session_title}". High context overhead for output produced.` });
+    }
+    // Output heavy: output tokens > input tokens and >5k output
+    if (s.output_tokens > s.input_tokens && s.output_tokens > 5000) {
+      warnings.push({ type: 'output_heavy', severity: 'info', session_id: s.session_id,
+        detail: `${s.output_tokens} output vs ${s.input_tokens} input in "${s.session_title}". Unusually verbose generation.` });
+    }
+    // Long running: >30 min
+    if (s.started_at && s.ended_at) {
+      const dur = new Date(s.ended_at) - new Date(s.started_at);
+      if (dur > 30 * 60 * 1000) {
+        const mins = Math.round(dur / 60000);
+        warnings.push({ type: 'long_running', severity: 'info', session_id: s.session_id,
+          detail: `${mins}m duration for "${s.session_title}". May indicate stuck or slow processing.` });
+      }
+    }
+  }
+
+  // Inefficient reads: read tool calls without offset/limit/startLine/endLine
+  const inefficientReads = [];
+  for (const r of records) {
+    for (const te of r.toolEvents) {
+      if (te.tool === 'read' && te.args && !te.args.offset && !te.args.limit && !te.args.startLine && !te.args.endLine && !te.args.start_line && !te.args.end_line) {
+        inefficientReads.push({ file: te.args.filePath || te.args.path || te.args.file || 'unknown', session_id: r.sessionId, tokens: te.tokens });
+      }
+    }
+  }
+  if (inefficientReads.length > 0) {
+    const totalTok = inefficientReads.reduce((s, r) => s + r.tokens, 0);
+    warnings.push({ type: 'inefficient_reads', severity: 'warn',
+      detail: `${inefficientReads.length} full-file reads without offset/limit (${totalTok} tokens). Use partial reads to reduce context.`,
+      reads: inefficientReads });
+  }
+
+  // Tool dominance: single tool >60% of all tool tokens
+  const totalToolTok = toolTotals.reduce((s, t) => s + t.input_tokens + t.output_tokens, 0);
+  for (const t of toolTotals) {
+    const toolTok = t.input_tokens + t.output_tokens;
+    if (totalToolTok > 10000 && toolTok / totalToolTok > 0.6) {
+      warnings.push({ type: 'tool_dominance', severity: 'info',
+        detail: `"${t.tool}" accounts for ${Math.round(toolTok / totalToolTok * 100)}% of tool tokens (${toolTok}). May indicate over-reliance.` });
+    }
+    // Expensive tool: single tool >100k tokens
+    if (toolTok > 100000) {
+      warnings.push({ type: 'expensive_tool', severity: 'warn',
+        detail: `"${t.tool}" consumed ${toolTok} tokens across ${t.calls} calls. Consider optimizing usage.` });
+    }
+  }
+
+  return warnings;
+}
+
+// --- Session detail builder (always included) ---
+
+function buildSessionDetails(records) {
+  const buckets = new Map();
+
+  for (const r of records) {
+    const key = `${r.sessionId}|${r.provider}|${r.model}`;
+    if (!buckets.has(key)) {
+      buckets.set(key, {
+        session_id: r.sessionId,
+        session_title: r.sessionTitle,
+        directory: r.directory,
+        started_at: r.created,
+        ended_at: r.completed || r.created,
+        provider: r.provider,
+        model: r.model,
+        input_tokens: 0,
+        output_tokens: 0,
+        estimated_tokens: 0,
+        tool_input_tokens: 0,
+        tool_output_tokens: 0,
+        tool_calls: 0,
+        requests: 0,
+        agents: {},
+        tool_timeline: [],
+      });
+    }
+    const b = buckets.get(key);
+    b.input_tokens += r.inputTokens;
+    b.output_tokens += r.outputTokens;
+    if (r.estimated) b.estimated_tokens += r.inputTokens + r.outputTokens;
+    for (const t of r.tools) {
+      b.tool_input_tokens += t.inputTokens;
+      b.tool_output_tokens += t.outputTokens;
+      b.tool_calls++;
+    }
+    b.requests++;
+    if (r.created < b.started_at) b.started_at = r.created;
+    const end = r.completed || r.created;
+    if (end > b.ended_at) b.ended_at = end;
+
+    // Agent tracking
+    if (r.agent) {
+      if (!b.agents[r.agent]) b.agents[r.agent] = { requests: 0, input_tokens: 0, output_tokens: 0 };
+      b.agents[r.agent].requests++;
+      b.agents[r.agent].input_tokens += r.inputTokens;
+      b.agents[r.agent].output_tokens += r.outputTokens;
+    }
+
+    // Tool timeline events for flame graph
+    for (const te of r.toolEvents) {
+      if (te.start && te.end) {
+        b.tool_timeline.push({ tool: te.tool, start: te.start, end: te.end, tokens: te.tokens });
+      }
+    }
+  }
+
+  return [...buckets.values()]
+    .map(s => ({
+      ...s,
+      started_at: new Date(s.started_at).toISOString(),
+      ended_at: new Date(s.ended_at).toISOString(),
+      agents: Object.keys(s.agents).length > 0 ? s.agents : undefined,
+      tool_timeline: s.tool_timeline.length > 0 ? s.tool_timeline.sort((a, b) => a.start - b.start) : undefined,
+    }))
+    .sort((a, b) => a.started_at.localeCompare(b.started_at));
 }
 
 function buildHourlyReport(records, period) {
@@ -419,44 +580,14 @@ function buildHourlyReport(records, period) {
 
   const model_totals = buildModelTotals(records);
   const tool_totals = aggregateTools(records);
+  const sessions = buildSessionDetails(records);
+  const warnings = detectWarnings(records, tool_totals, sessions);
 
-  return { report_type: 'hourly', period, generated_at: new Date().toISOString(), totals, model_totals, tool_totals, usage };
+  return { report_type: 'hourly', period, generated_at: new Date().toISOString(), totals, model_totals, tool_totals, warnings, sessions, usage };
 }
 
 function buildSessionsReport(records, period) {
-  const buckets = new Map();
-
-  for (const r of records) {
-    const key = `${r.sessionId}|${r.provider}|${r.model}`;
-    if (!buckets.has(key)) {
-      buckets.set(key, {
-        session_id: r.sessionId,
-        session_title: r.sessionTitle,
-        directory: r.directory,
-        started_at: r.created,
-        ended_at: r.created,
-        provider: r.provider,
-        model: r.model,
-        input_tokens: 0,
-        output_tokens: 0,
-        estimated_tokens: 0,
-        tool_input_tokens: 0,
-        requests: 0,
-      });
-    }
-    const b = buckets.get(key);
-    b.input_tokens += r.inputTokens;
-    b.output_tokens += r.outputTokens;
-    if (r.estimated) b.estimated_tokens += r.inputTokens + r.outputTokens;
-    for (const t of r.tools) b.tool_input_tokens += t.inputTokens;
-    b.requests++;
-    if (r.created < b.started_at) b.started_at = r.created;
-    if (r.created > b.ended_at) b.ended_at = r.created;
-  }
-
-  const sessions = [...buckets.values()]
-    .map(s => ({ ...s, started_at: new Date(s.started_at).toISOString(), ended_at: new Date(s.ended_at).toISOString() }))
-    .sort((a, b) => a.started_at.localeCompare(b.started_at));
+  const sessions = buildSessionDetails(records);
 
   const totals = sessions.reduce((t, s) => {
     t.input_tokens += s.input_tokens;
@@ -469,8 +600,9 @@ function buildSessionsReport(records, period) {
 
   const model_totals = buildModelTotals(records);
   const tool_totals = aggregateTools(records);
+  const warnings = detectWarnings(records, tool_totals, sessions);
 
-  return { report_type: 'sessions', period, generated_at: new Date().toISOString(), totals, model_totals, tool_totals, sessions };
+  return { report_type: 'sessions', period, generated_at: new Date().toISOString(), totals, model_totals, tool_totals, warnings, sessions };
 }
 
 // --- Main ---
@@ -502,7 +634,7 @@ function main() {
     : buildHourlyReport(records, period);
 
   if (opts.summaryOnly) {
-    report = { report_type: report.report_type, period: report.period, generated_at: report.generated_at, totals: report.totals, model_totals: report.model_totals, tool_totals: report.tool_totals };
+    report = { report_type: report.report_type, period: report.period, generated_at: report.generated_at, totals: report.totals, model_totals: report.model_totals, tool_totals: report.tool_totals, warnings: report.warnings };
   }
 
   const json = JSON.stringify(report, null, 2);

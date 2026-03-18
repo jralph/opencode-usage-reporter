@@ -29,6 +29,7 @@ function mergeReports(reportDataList) {
   const toolMap = {};
   const allUsage = [];
   const allSessions = [];
+  const allWarnings = [];
   let minStart = null, maxEnd = null, maxDays = 0;
 
   reportDataList.forEach(r => {
@@ -60,6 +61,9 @@ function mergeReports(reportDataList) {
     // usage / sessions — concatenate
     if (r.usage) allUsage.push(...r.usage);
     if (r.sessions) allSessions.push(...r.sessions);
+
+    // warnings — concatenate
+    if (r.warnings) allWarnings.push(...r.warnings);
   });
 
   const days = maxDays || (minStart && maxEnd ? Math.ceil((new Date(maxEnd) - new Date(minStart)) / 86400000) : 0);
@@ -73,6 +77,7 @@ function mergeReports(reportDataList) {
     tool_totals: Object.values(toolMap).sort((a,b) => b.input_tokens - a.input_tokens),
     usage: allUsage.length ? allUsage : undefined,
     sessions: allSessions.length ? allSessions : undefined,
+    warnings: allWarnings.length ? allWarnings : undefined,
   };
 }
 
@@ -122,7 +127,7 @@ function route() {
   const hash = location.hash || '#/';
   const page = hash.replace('#/', '') || 'dashboard';
   document.querySelectorAll('.nav-link').forEach(a => a.classList.toggle('active', a.dataset.page === (page || 'dashboard')));
-  const pages = { dashboard: renderDashboard, models: renderModels, tools: renderTools, timeline: renderTimeline };
+  const pages = { dashboard: renderDashboard, models: renderModels, tools: renderTools, timeline: renderTimeline, sessions: renderSessions, warnings: renderWarnings };
   (pages[page] || pages.dashboard)();
 }
 
@@ -171,8 +176,10 @@ function renderDashboard() {
       <div class="card"><div class="card-label">Tool Tokens</div><div class="card-value green">${fmtM(t.tool_input_tokens)}</div><div class="card-sub">${toolPct}% of input</div></div>
       <div class="card"><div class="card-label">Est. API Cost</div><div class="card-value yellow">${totalCost > 0 ? '$'+totalCost.toFixed(2) : 'N/A'}</div><div class="card-sub">Based on known model rates</div></div>
       <div class="card"><div class="card-label">Models Used</div><div class="card-value">${(r.model_totals||[]).length}</div><div class="card-sub">${new Set((r.model_totals||[]).map(m=>m.provider)).size} providers</div></div>
+      <div class="card"><div class="card-label">Estimated Tokens</div><div class="card-value">${fmtM(t.estimated_tokens)}</div><div class="card-sub">${pct(t.estimated_tokens, totalTokens)} of total (not API-reported)</div></div>
       <div class="card"><div class="card-label">Period</div><div class="card-value" style="font-size:1.1rem">${r.period.days}d</div><div class="card-sub">${new Date(r.period.start).toLocaleDateString()} – ${new Date(r.period.end).toLocaleDateString()}</div></div>
     </div>
+    ${(r.warnings && r.warnings.length) ? `<div class="chart-box" style="margin-bottom:1.5rem"><h3>⚠ Warnings (${r.warnings.length})</h3>${r.warnings.slice(0,5).map(w => `<div class="warning-item ${w.severity}" style="margin-top:0.5rem"><div class="warning-type">${w.type.replace(/_/g,' ')}</div><div class="warning-detail">${w.detail}</div></div>`).join('')}${r.warnings.length > 5 ? `<p style="margin-top:0.75rem;font-size:0.85rem"><a href="#/warnings" style="color:var(--accent2)">View all ${r.warnings.length} warnings →</a></p>` : ''}</div>` : ''}
     <div class="chart-grid">
       <div class="chart-box full"><h3>Token Usage Over Time</h3><div class="chart-wrap tall"><canvas id="ch-timeline"></canvas></div></div>
       <div class="chart-box"><h3>Tokens by Provider</h3><div class="chart-wrap"><canvas id="ch-provider-pie"></canvas></div></div>
@@ -523,6 +530,9 @@ function renderTimeline() {
     <div class="chart-grid">
       <div class="chart-box full"><h3>Daily Requests by Provider</h3><div class="chart-wrap tall"><canvas id="ch-daily-prov"></canvas></div></div>
     </div>
+    <div class="chart-grid">
+      <div class="chart-box full"><h3>Daily Tool Token Usage (Top 8)</h3><div class="chart-wrap tall"><canvas id="ch-daily-tools"></canvas></div></div>
+    </div>
     <div class="table-box"><h3>Daily Breakdown</h3>
       <table><thead><tr><th>Day</th><th class="num">Input Tokens</th><th class="num">Output Tokens</th><th class="num">Requests</th><th class="num">Active Hours</th></tr></thead>
       <tbody>${dayRows}</tbody></table>
@@ -550,6 +560,282 @@ function renderTimeline() {
       }))
     }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
   });
+
+  // Daily tool token usage
+  const toolByDay = {};
+  usage.forEach(u => {
+    if (!u.tools) return;
+    const dayKey = (u.hour || u.started_at || '').slice(0, 10);
+    if (!dayKey) return;
+    Object.entries(u.tools).forEach(([tool, d]) => {
+      if (!toolByDay[tool]) toolByDay[tool] = {};
+      toolByDay[tool][dayKey] = (toolByDay[tool][dayKey] || 0) + (d.input_tokens || 0);
+    });
+  });
+  const topTools = Object.entries(toolByDay).sort((a,b) => {
+    const sumA = Object.values(a[1]).reduce((s,v) => s+v, 0);
+    const sumB = Object.values(b[1]).reduce((s,v) => s+v, 0);
+    return sumB - sumA;
+  }).slice(0, 8);
+  if (topTools.length) {
+    charts.dailyTools = new Chart($('#ch-daily-tools'), {
+      type: 'bar', data: {
+        labels: days.map(d => new Date(d+'T00:00:00Z').toLocaleDateString(undefined,{month:'short',day:'numeric'})),
+        datasets: topTools.map(([tool, dayData], i) => ({
+          label: tool,
+          data: days.map(d => dayData[d] || 0),
+          backgroundColor: COLORS[i % COLORS.length],
+          stack: 's',
+        }))
+      }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: v => fmtM(v) } } }, plugins: { legend: { position: 'top' } } }
+    });
+  }
+}
+
+/* ── Sessions Page ── */
+function renderSessions() {
+  const r = currentReport;
+  const sessions = r.sessions || [];
+
+  if (!sessions.length) {
+    $('#app').innerHTML = '<p style="color:var(--text2);padding:2rem">No session data in this report.</p>';
+    return;
+  }
+
+  const sorted = [...sessions].sort((a,b) => (b.started_at||'').localeCompare(a.started_at||''));
+  const totalTokens = sorted.reduce((s,x) => s + x.input_tokens + x.output_tokens, 0);
+  const totalReqs = sorted.reduce((s,x) => s + x.requests, 0);
+  const avgTokens = sorted.length ? Math.round(totalTokens / sorted.length) : 0;
+  const dirs = new Set(sorted.map(s => s.directory).filter(Boolean));
+
+  const dur = s => {
+    if (!s.started_at || !s.ended_at) return '\u2014';
+    const mins = Math.round((new Date(s.ended_at) - new Date(s.started_at)) / 60000);
+    return mins >= 60 ? Math.floor(mins/60)+'h '+mins%60+'m' : mins+'m';
+  };
+
+  let totalCost = 0;
+  let rows = sorted.map((s, idx) => {
+    const total = s.input_tokens + s.output_tokens;
+    const cost = estimateCost(s.input_tokens, s.output_tokens, s.model);
+    if (cost) totalCost += cost;
+    const hasDetail = (s.agents && Object.keys(s.agents).length > 0) || (s.tool_timeline && s.tool_timeline.length > 0);
+    const toolCalls = s.tool_calls || 0;
+    return `<tr class="${hasDetail ? 'session-detail' : ''}" ${hasDetail ? `onclick="toggleSessionDetail(${idx})"` : ''}>
+      <td title="${s.session_id||''}">${s.session_title || s.session_id?.slice(0,8) || '\u2014'}</td>
+      <td><span class="${badgeClass(s.provider)}">${s.provider}</span></td>
+      <td>${s.model}</td>
+      <td class="num">${fmt(total)}</td>
+      <td class="num">${fmt(s.requests)}</td>
+      <td class="num">${fmt(toolCalls)}</td>
+      <td class="num">${fmt(s.tool_input_tokens)}</td>
+      <td class="num">${cost != null ? '$'+cost.toFixed(2) : '\u2014'}</td>
+      <td class="num">${dur(s)}</td>
+      <td style="font-size:0.75rem;color:var(--text2)" title="${s.directory||''}">${s.directory ? s.directory.split('/').slice(-2).join('/') : '\u2014'}</td>
+      <td style="font-size:0.75rem;color:var(--text2)">${s.started_at ? new Date(s.started_at).toLocaleString() : '\u2014'}</td>
+    </tr>
+    <tr id="sess-detail-${idx}" style="display:none"><td colspan="11" style="padding:1rem;background:var(--surface2)">
+      <div id="sess-detail-content-${idx}"></div>
+    </td></tr>`;
+  }).join('');
+
+  rows += totalsRow([
+    {v:`${sorted.length} sessions`,cls:''},{v:'',cls:''},{v:'Total',cls:''},
+    {v:fmt(totalTokens),cls:'num'},{v:fmt(totalReqs),cls:'num'},
+    {v:fmt(sorted.reduce((s,x)=>s+(x.tool_calls||0),0)),cls:'num'},
+    {v:fmt(sorted.reduce((s,x)=>s+x.tool_input_tokens,0)),cls:'num'},
+    {v:totalCost>0?'$'+totalCost.toFixed(2):'\u2014',cls:'num'},
+    {v:'',cls:'num'},{v:'',cls:''},{v:'',cls:''},
+  ]);
+
+  // Warning summary for sessions page
+  const warnings = r.warnings || [];
+  const warnCount = warnings.filter(w => w.severity === 'severe' || w.severity === 'warn').length;
+  const warnCard = warnCount > 0
+    ? `<div class="card"><div class="card-label">Warnings</div><div class="card-value" style="color:var(--red)">${warnCount}</div><div class="card-sub"><a href="#/warnings" style="color:var(--accent2)">View details →</a></div></div>`
+    : `<div class="card"><div class="card-label">Warnings</div><div class="card-value green">0</div><div class="card-sub">No issues detected</div></div>`;
+
+  $('#app').innerHTML = `
+    <div class="cards">
+      <div class="card"><div class="card-label">Sessions</div><div class="card-value accent">${sorted.length}</div></div>
+      <div class="card"><div class="card-label">Avg Tokens/Session</div><div class="card-value blue">${fmtM(avgTokens)}</div></div>
+      <div class="card"><div class="card-label">Projects</div><div class="card-value green">${dirs.size}</div></div>
+      <div class="card"><div class="card-label">Est. Total Cost</div><div class="card-value yellow">${totalCost > 0 ? '$'+totalCost.toFixed(2) : 'N/A'}</div></div>
+      ${warnCard}
+    </div>
+    <div class="chart-grid">
+      <div class="chart-box"><h3>Sessions by Provider</h3><div class="chart-wrap"><canvas id="ch-sess-prov"></canvas></div></div>
+      <div class="chart-box"><h3>Tokens by Model</h3><div class="chart-wrap"><canvas id="ch-sess-model"></canvas></div></div>
+    </div>
+    <div class="table-box"><h3>All Sessions <span style="font-size:0.75rem;color:var(--text2);font-weight:normal">(click rows with agent/tool data to expand)</span></h3>
+      <table><thead><tr><th>Title</th><th>Provider</th><th>Model</th><th class="num">Tokens</th><th class="num">Requests</th><th class="num">Tool Calls</th><th class="num">Tool Tokens</th><th class="num">Est. Cost</th><th class="num">Duration</th><th>Project</th><th>Started</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>`;
+
+  // Store sessions for detail expansion
+  window._sessionData = sorted;
+
+  const provAgg = {};
+  sorted.forEach(s => { provAgg[s.provider] = (provAgg[s.provider]||0) + 1; });
+  const provs = Object.entries(provAgg).sort((a,b) => b[1]-a[1]);
+  charts.sessProv = new Chart($('#ch-sess-prov'), {
+    type: 'doughnut', data: { labels: provs.map(p=>p[0]), datasets: [{ data: provs.map(p=>p[1]), backgroundColor: COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+  });
+
+  const modelAgg = {};
+  sorted.forEach(s => { const k = s.model; modelAgg[k] = (modelAgg[k]||0) + s.input_tokens + s.output_tokens; });
+  const models = Object.entries(modelAgg).sort((a,b) => b[1]-a[1]).slice(0,8);
+  charts.sessModel = new Chart($('#ch-sess-model'), {
+    type: 'doughnut', data: { labels: models.map(m=>m[0]), datasets: [{ data: models.map(m=>m[1]), backgroundColor: COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+  });
+}
+
+/* ── Session detail toggle ── */
+window.toggleSessionDetail = function(idx) {
+  const row = document.getElementById('sess-detail-' + idx);
+  const content = document.getElementById('sess-detail-content-' + idx);
+  if (!row) return;
+  const visible = row.style.display !== 'none';
+  row.style.display = visible ? 'none' : 'table-row';
+  if (!visible && content && !content.dataset.loaded) {
+    const s = window._sessionData[idx];
+    let html = '';
+    if (s.agents && Object.keys(s.agents).length > 0) {
+      html += '<h3 style="font-size:0.9rem;color:var(--text2);margin-bottom:0.5rem">Agent Flow</h3>';
+      html += renderAgentFlowChart(s.agents);
+    }
+    if (s.tool_timeline && s.tool_timeline.length > 0) {
+      html += '<h3 style="font-size:0.9rem;color:var(--text2);margin:1rem 0 0.5rem">Tool Timeline</h3>';
+      html += renderFlameChartSVG(s.tool_timeline, content.offsetWidth || 800);
+    }
+    if (!html) html = '<p style="color:var(--text2);font-size:0.85rem">No detail data available</p>';
+    content.innerHTML = html;
+    content.dataset.loaded = '1';
+  }
+};
+
+/* ── Warnings Page ── */
+function renderWarnings() {
+  const r = currentReport;
+  const warnings = r.warnings || [];
+
+  if (!warnings.length) {
+    $('#app').innerHTML = '<div class="cards"><div class="card"><div class="card-label">Status</div><div class="card-value green">✓</div><div class="card-sub">No warnings detected</div></div></div>';
+    return;
+  }
+
+  const bySeverity = { severe: 0, warn: 0, info: 0 };
+  const byType = {};
+  warnings.forEach(w => {
+    bySeverity[w.severity] = (bySeverity[w.severity] || 0) + 1;
+    byType[w.type] = (byType[w.type] || 0) + 1;
+  });
+
+  const items = warnings.map(w =>
+    `<div class="warning-item ${w.severity}"><div class="warning-type">${w.type.replace(/_/g, ' ')}</div><div class="warning-detail">${w.detail}${w.session_id ? ' <span style="color:var(--text2);font-size:0.75rem">('+w.session_id.slice(0,8)+'…)</span>' : ''}</div></div>`
+  ).join('');
+
+  $('#app').innerHTML = `
+    <div class="cards">
+      <div class="card"><div class="card-label">Total Warnings</div><div class="card-value accent">${warnings.length}</div></div>
+      <div class="card"><div class="card-label">Severe</div><div class="card-value" style="color:var(--red)">${bySeverity.severe||0}</div></div>
+      <div class="card"><div class="card-label">Warnings</div><div class="card-value yellow">${bySeverity.warn||0}</div></div>
+      <div class="card"><div class="card-label">Info</div><div class="card-value blue">${bySeverity.info||0}</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-box"><h3>By Severity</h3><div class="chart-wrap"><canvas id="ch-warn-sev"></canvas></div></div>
+      <div class="chart-box"><h3>By Type</h3><div class="chart-wrap"><canvas id="ch-warn-type"></canvas></div></div>
+    </div>
+    <div style="margin-bottom:1.5rem">${items}</div>`;
+
+  const sevEntries = Object.entries(bySeverity).filter(e => e[1] > 0);
+  const sevColors = { severe: '#e17055', warn: '#fdcb6e', info: '#74b9ff' };
+  charts.warnSev = new Chart($('#ch-warn-sev'), {
+    type: 'doughnut', data: { labels: sevEntries.map(e=>e[0]), datasets: [{ data: sevEntries.map(e=>e[1]), backgroundColor: sevEntries.map(e=>sevColors[e[0]]) }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+  });
+  const typeEntries = Object.entries(byType).sort((a,b) => b[1]-a[1]);
+  charts.warnType = new Chart($('#ch-warn-type'), {
+    type: 'bar', data: { labels: typeEntries.map(e=>e[0].replace(/_/g,' ')), datasets: [{ label: 'Count', data: typeEntries.map(e=>e[1]), backgroundColor: '#a29bfe' }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
+
+/* ── Flame Chart SVG helper ── */
+function renderFlameChartSVG(events, width) {
+  if (!events || events.length < 1) return '<p style="color:var(--text2);font-size:0.85rem">No timeline data</p>';
+  const minT = Math.min(...events.map(e => e.start));
+  const maxT = Math.max(...events.map(e => e.end));
+  const range = maxT - minT || 1;
+
+  // Group overlapping events into rows
+  const rows = [];
+  for (const e of events) {
+    let placed = false;
+    for (const row of rows) {
+      if (row.every(r => e.start >= r.end || e.end <= r.start)) { row.push(e); placed = true; break; }
+    }
+    if (!placed) rows.push([e]);
+  }
+
+  const rowH = 20, pad = 2, w = width || 800;
+  const h = rows.length * (rowH + pad) + 28;
+  const toolColors = {};
+  let colorIdx = 0;
+
+  let svg = `<svg class="flame-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`;
+  // Time axis
+  svg += `<line x1="0" y1="${h-20}" x2="${w}" y2="${h-20}" stroke="var(--border)"/>`;
+  const durSec = Math.round(range / 1000);
+  for (let i = 0; i <= 4; i++) {
+    const x = (i / 4) * w;
+    const t = Math.round((i / 4) * durSec);
+    const label = t > 60 ? Math.round(t/60)+'m' : t+'s';
+    const anchor = i === 0 ? 'start' : i === 4 ? 'end' : 'middle';
+    svg += `<text x="${x}" y="${h-5}" fill="var(--text2)" font-size="10" text-anchor="${anchor}">${label}</text>`;
+  }
+
+  rows.forEach((row, ri) => {
+    const y = ri * (rowH + pad);
+    for (const e of row) {
+      if (!toolColors[e.tool]) toolColors[e.tool] = COLORS[colorIdx++ % COLORS.length];
+      const x = ((e.start - minT) / range) * w;
+      const ew = Math.max(((e.end - e.start) / range) * w, 3);
+      const dur = e.end - e.start;
+      const durLabel = dur > 1000 ? (dur/1000).toFixed(1)+'s' : dur+'ms';
+      svg += `<rect x="${x}" y="${y}" width="${ew}" height="${rowH}" fill="${toolColors[e.tool]}" rx="2"><title>${e.tool} (${durLabel}, ${e.tokens||0} tok)</title></rect>`;
+      if (ew > 50) svg += `<text x="${x+3}" y="${y+14}" fill="#fff" font-size="10">${e.tool.length > ew/6 ? e.tool.slice(0,Math.floor(ew/6))+'…' : e.tool}</text>`;
+    }
+  });
+
+  svg += '</svg>';
+  return `<div class="flame-container">${svg}</div>`;
+}
+
+/* ── Agent Flow Chart helper ── */
+function renderAgentFlowChart(agents) {
+  if (!agents || !Object.keys(agents).length) return '';
+  const entries = Object.entries(agents).sort((a,b) => (b[1].input_tokens+b[1].output_tokens) - (a[1].input_tokens+a[1].output_tokens));
+  const maxTok = Math.max(...entries.map(([,a]) => a.input_tokens + a.output_tokens), 1);
+
+  let html = '<div style="display:flex;flex-direction:column;gap:6px">';
+  entries.forEach(([name, a], i) => {
+    const total = a.input_tokens + a.output_tokens;
+    const pctW = Math.max(5, (total / maxTok) * 100);
+    const color = COLORS[i % COLORS.length];
+    html += `<div style="display:flex;align-items:center;gap:8px;font-size:0.8rem">
+      <span style="min-width:100px;color:var(--text2)">${name}</span>
+      <div style="flex:1;height:16px;background:var(--surface2);border-radius:3px;overflow:hidden">
+        <div style="width:${pctW}%;height:100%;background:${color};border-radius:3px"></div>
+      </div>
+      <span style="min-width:60px;text-align:right;color:var(--text2)">${fmtM(total)}</span>
+      <span style="min-width:30px;text-align:right;color:var(--text2)">${a.requests}r</span>
+    </div>`;
+  });
+  html += '</div>';
+  return html;
 }
 
 /* ── Init ── */

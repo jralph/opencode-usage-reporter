@@ -68,3 +68,28 @@ th.num { text-align: right; }
   nav { flex-wrap: wrap; }
   .cards { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Warnings */
+.warning-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; }
+.warning-item.severe { border-color: var(--red); background: rgba(225,112,85,0.08); }
+.warning-item.warn { border-color: var(--yellow); background: rgba(253,203,110,0.08); }
+.warning-item.info { border-color: var(--blue); background: rgba(116,185,255,0.08); }
+.warning-type { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; white-space: nowrap; min-width: 140px; }
+.warning-item.severe .warning-type { color: var(--red); }
+.warning-item.warn .warning-type { color: var(--yellow); }
+.warning-item.info .warning-type { color: var(--blue); }
+.warning-detail { font-size: 0.85rem; color: var(--text2); }
+.warning-badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+.warning-badge.severe { background: rgba(225,112,85,0.2); color: var(--red); }
+.warning-badge.warn { background: rgba(253,203,110,0.2); color: var(--yellow); }
+.warning-badge.info { background: rgba(116,185,255,0.2); color: var(--blue); }
+
+/* Flame chart */
+.flame-container { overflow-x: auto; }
+.flame-svg rect { cursor: default; }
+.flame-svg rect:hover { opacity: 0.8; }
+.flame-svg text { pointer-events: none; }
+
+/* Session detail modal */
+.session-detail { cursor: pointer; }
+.session-detail:hover td { background: rgba(108,92,231,0.1) !important; }
