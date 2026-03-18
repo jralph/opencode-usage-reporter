@@ -61,7 +61,7 @@ The script reads OpenCode's local data from two sources (auto-detected):
 
 **Flame graphs** (`tool_timeline`): Session reports include a `tool_timeline` array for each session. For native OpenCode `task` parts (which store `state.metadata.summary` with child part IDs), `buildFlameEvents()` recursively expands the tree and assigns `depth` values. OH My Opencode tasks use a different format with no `summary`, so they appear as single flat bars labelled with their `subagent_type` (e.g. `[explore] description`). The dashboard renders this as an SVG flame chart using depth for row placement.
 
-**Privacy**: Session titles are never included in output. `session_title` is always the first 8 characters of the session ID.
+**Privacy**: By default, `session_title` is the first 8 characters of the session ID. Pass `--use-real-session-name` to include actual session titles.
 
 ## Dashboard (`public/`)
 
@@ -75,6 +75,6 @@ The dashboard supports loading and merging multiple report JSON files. Session r
 
 ## Boundaries
 
-- **Always**: keep reporter a single file, output valid JSON, support both SQLite and JSON file sources, anonymise session titles
-- **Never**: add network calls, write to OpenCode's storage directory, require API keys, include session titles or other user-identifiable text in report output
+- **Always**: keep reporter a single file, output valid JSON, support both SQLite and JSON file sources, anonymise session titles by default
+- **Never**: add network calls, write to OpenCode's storage directory, require API keys, include session titles in output unless `--use-real-session-name` is passed
 - **Ask first**: adding new report types, changing the output schema (other tools may depend on it)

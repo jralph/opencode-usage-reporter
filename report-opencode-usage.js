@@ -15,12 +15,13 @@ const DB_PATH = path.join(OPENCODE_DIR, 'opencode.db');
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { days: 7, report: 'hours', output: null, summaryOnly: false };
+  const opts = { days: 7, report: 'hours', output: null, summaryOnly: false, useRealSessionName: false };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--days' && args[i + 1]) opts.days = parseInt(args[i + 1], 10) || 7;
     if (args[i] === '--report' && args[i + 1]) opts.report = args[i + 1];
     if (args[i] === '--output' && args[i + 1]) opts.output = args[i + 1];
     if (args[i] === '--summary-only') opts.summaryOnly = true;
+    if (args[i] === '--use-real-session-name') opts.useRealSessionName = true;
     if (args[i] === '--help' || args[i] === '-h') {
       console.log(`Usage: report-opencode-usage.js [options]
 
@@ -29,6 +30,7 @@ Options:
   --report <hours|sessions>  Report type (default: hours)
   --output <file>         Output file path (default: stdout)
   --summary-only          Only output totals, no per-hour/session breakdown
+  --use-real-session-name Include actual session titles instead of anonymised IDs
   --help                  Show this help`);
       process.exit(0);
     }
@@ -101,6 +103,9 @@ function getAllSessions() {
   }
   return sessions;
 }
+
+// Runtime options (set in main before data collection)
+let useRealSessionName = false;
 
 // Pre-loaded DB data
 let dbMessagesBySession = new Map();
@@ -391,7 +396,7 @@ function collectUsageData(sessions, cutoff) {
 
     records.push({
       sessionId: session.id,
-      sessionTitle: session.id.slice(0, 8),
+      sessionTitle: useRealSessionName ? (session.title || session.slug || session.id.slice(0, 8)) : session.id.slice(0, 8),
       directory: session.directory || null,
       created: m.time.created,
       completed: m.time?.completed || m.time.created,
@@ -653,6 +658,7 @@ function main() {
     console.error(`OpenCode storage not found at: ${OPENCODE_DIR}`);
     process.exit(1);
   }
+  useRealSessionName = opts.useRealSessionName;
   const sources = [hasDB && 'SQLite', hasFiles && 'JSON files'].filter(Boolean).join(' + ');
   console.error(`Sources: ${sources}`);
 

@@ -36,6 +36,7 @@ npx jralph/opencode-usage-reporter --days 30 --report sessions --output report.j
 | `--report <type>` | `hours` | Report type: `hours` or `sessions` |
 | `--output <file>` | stdout | Write JSON to file instead of stdout |
 | `--summary-only` | | Only output totals, model breakdowns, and tool stats (no per-hour/session rows) |
+| `--use-real-session-name` | | Include actual session titles instead of anonymised IDs |
 | `--help` | | Show help |
 
 ### Global Install
