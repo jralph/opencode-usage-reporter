@@ -59,10 +59,13 @@ Pages:
 - **Timeline** — daily token trends, requests by provider, daily tool usage
 - **Sessions** — per-session table with agent flow charts and tool flame graphs (sessions report only)
 - **Warnings** — waste detection alerts (excessive iteration, wasted compute, low efficiency)
+- **Files** — hot files by token cost, directory and extension breakdowns (only visible with `--use-real-session-name`)
 
 ### Privacy
 
-Session titles are **not** included in reports. The `session_title` field contains only the first 8 characters of the session ID.
+By default, session titles and file paths are **not** included in reports. The `session_title` field contains only the first 8 characters of the session ID, and no file-level detail is collected.
+
+Pass `--use-real-session-name` to opt into including actual session titles, per-session file access stats (`files`), and a global `file_stats` summary. This enables the Files page in the dashboard.
 
 ## Output Format
 
@@ -164,8 +167,14 @@ Breaks down usage per session/provider/model with enriched per-session metadata:
       "tool_timeline": [
         { "tool": "task", "start": 1741000000000, "end": 1741000060000, "depth": 0, "title": "[explore] Map UI components" },
         { "tool": "read", "start": 1741000005000, "end": 1741000006000, "depth": 1, "tokens": 420 }
+      ],
+      "files": [
+        { "path": "/home/user/project/src/auth.js", "calls": 5, "input_tokens": 18000, "tools": { "read": 4, "edit": 1 } }
       ]
     }
+  ],
+  "file_stats": [
+    { "path": "/home/user/project/src/auth.js", "calls": 15, "input_tokens": 45000, "sessions": 3, "directory": "/home/user/project", "tools": { "read": 10, "edit": 4, "write": 1 } }
   ]
 }
 ```
@@ -188,6 +197,8 @@ The `tool_timeline` array powers the flame graph in the dashboard. Events includ
 | `agents` | Per-agent token/request breakdown (when agent names are available) |
 | `tool_timeline` | Ordered list of tool events with timing and depth for flame graph rendering |
 | `warnings` | Waste detection alerts: `excessive_iteration`, `wasted_compute`, `low_token_efficiency`, `output_heavy`, `long_running` |
+| `files` | *(sessions report, `--use-real-session-name` only)* Per-file access stats for this session — path, calls, input_tokens, tools breakdown |
+| `file_stats` | *(`--use-real-session-name` only)* Global file access summary across all sessions — same shape as `files` plus a `sessions` count |
 
 ## How It Works
 

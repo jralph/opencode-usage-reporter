@@ -61,7 +61,7 @@ The script reads OpenCode's local data from two sources (auto-detected):
 
 **Flame graphs** (`tool_timeline`): Session reports include a `tool_timeline` array for each session. For native OpenCode `task` parts (which store `state.metadata.summary` with child part IDs), `buildFlameEvents()` recursively expands the tree and assigns `depth` values. OH My Opencode tasks use a different format with no `summary`, so they appear as single flat bars labelled with their `subagent_type` (e.g. `[explore] description`). The dashboard renders this as an SVG flame chart using depth for row placement.
 
-**Privacy**: By default, `session_title` is the first 8 characters of the session ID. Pass `--use-real-session-name` to include actual session titles.
+**Privacy**: By default, `session_title` is the first 8 characters of the session ID and no file paths are recorded. Pass `--use-real-session-name` to include actual session titles, per-session `files` arrays (read/edit/write paths with token costs), and a global `file_stats` summary — this also enables the Files dashboard page.
 
 ## Dashboard (`public/`)
 
@@ -69,7 +69,7 @@ The script reads OpenCode's local data from two sources (auto-detected):
 - `public/app.js` — all rendering logic (vanilla JS, no framework)
 - `public/styles.css` — dark theme styles
 
-Pages: Dashboard, Models, Tools, Timeline, Sessions, Warnings.
+Pages: Dashboard, Models, Tools, Timeline, Sessions, Warnings, Files (only shown when `file_stats` is present).
 
 The dashboard supports loading and merging multiple report JSON files. Session rows with agent/tool data can be expanded inline to show agent flow bar charts and SVG flame graphs.
 

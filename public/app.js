@@ -108,6 +108,8 @@ async function loadReports() {
 
 function selectReportDirect(data) {
   currentReport = data;
+  const navFiles = document.getElementById('nav-files');
+  if (navFiles) navFiles.style.display = data.file_stats ? '' : 'none';
   route();
 }
 
@@ -127,7 +129,7 @@ function route() {
   const hash = location.hash || '#/';
   const page = hash.replace('#/', '') || 'dashboard';
   document.querySelectorAll('.nav-link').forEach(a => a.classList.toggle('active', a.dataset.page === (page || 'dashboard')));
-  const pages = { dashboard: renderDashboard, models: renderModels, tools: renderTools, timeline: renderTimeline, sessions: renderSessions, warnings: renderWarnings };
+  const pages = { dashboard: renderDashboard, models: renderModels, tools: renderTools, timeline: renderTimeline, sessions: renderSessions, warnings: renderWarnings, files: renderFiles };
   (pages[page] || pages.dashboard)();
 }
 
@@ -614,6 +616,7 @@ function renderSessions() {
     return mins >= 60 ? Math.floor(mins/60)+'h '+mins%60+'m' : mins+'m';
   };
 
+  const hasFileData = !!r.file_stats;
   let totalCost = 0;
   let rows = sorted.map((s, idx) => {
     const total = s.input_tokens + s.output_tokens;
@@ -621,6 +624,8 @@ function renderSessions() {
     if (cost) totalCost += cost;
     const hasDetail = (s.agents && Object.keys(s.agents).length > 0) || (s.tool_timeline && s.tool_timeline.length > 0);
     const toolCalls = s.tool_calls || 0;
+    const fileCount = s.files ? s.files.length : null;
+    const colCount = fileCount !== null ? 12 : 11;
     return `<tr class="${hasDetail ? 'session-detail' : ''}" ${hasDetail ? `onclick="toggleSessionDetail(${idx})"` : ''}>
       <td>${s.session_title || s.session_id?.slice(0,8) || '\u2014'}</td>
       <td><span class="${badgeClass(s.provider)}">${s.provider}</span></td>
@@ -633,8 +638,9 @@ function renderSessions() {
       <td class="num">${dur(s)}</td>
       <td style="font-size:0.75rem;color:var(--text2)" title="${s.directory||''}">${s.directory ? s.directory.split('/').slice(-2).join('/') : '\u2014'}</td>
       <td style="font-size:0.75rem;color:var(--text2)">${s.started_at ? new Date(s.started_at).toLocaleString() : '\u2014'}</td>
+      ${fileCount !== null ? `<td class="num" style="color:var(--accent2)">${fileCount}</td>` : ''}
     </tr>
-    <tr id="sess-detail-${idx}" style="display:none"><td colspan="11" style="padding:1rem;background:var(--surface2)">
+    <tr id="sess-detail-${idx}" style="display:none"><td colspan="${colCount}" style="padding:1rem;background:var(--surface2)">
       <div id="sess-detail-content-${idx}"></div>
     </td></tr>`;
   }).join('');
@@ -668,7 +674,7 @@ function renderSessions() {
       <div class="chart-box"><h3>Tokens by Model</h3><div class="chart-wrap"><canvas id="ch-sess-model"></canvas></div></div>
     </div>
     <div class="table-box"><h3>All Sessions <span style="font-size:0.75rem;color:var(--text2);font-weight:normal">(click rows with agent/tool data to expand)</span></h3>
-      <table><thead><tr><th>Title</th><th>Provider</th><th>Model</th><th class="num">Tokens</th><th class="num">Requests</th><th class="num">Tool Calls</th><th class="num">Tool Tokens</th><th class="num">Est. Cost</th><th class="num">Duration</th><th>Project</th><th>Started</th></tr></thead>
+      <table><thead><tr><th>Title</th><th>Provider</th><th>Model</th><th class="num">Tokens</th><th class="num">Requests</th><th class="num">Tool Calls</th><th class="num">Tool Tokens</th><th class="num">Est. Cost</th><th class="num">Duration</th><th>Project</th><th>Started</th>${hasFileData ? '<th class="num"><a href="#/files" style="color:var(--accent2)">Files ↗</a></th>' : ''}</tr></thead>
       <tbody>${rows}</tbody></table>
     </div>`;
 
@@ -709,6 +715,16 @@ window.toggleSessionDetail = function(idx) {
     if (s.tool_timeline && s.tool_timeline.length > 0) {
       html += '<h3 style="font-size:0.9rem;color:var(--text2);margin:1rem 0 0.5rem">Tool Timeline</h3>';
       html += renderFlameChartSVG(s.tool_timeline, content.offsetWidth || 800);
+    }
+    if (s.files && s.files.length > 0) {
+      html += '<h3 style="font-size:0.9rem;color:var(--text2);margin:1rem 0 0.5rem">Files Accessed</h3>';
+      html += '<table style="font-size:0.75rem;width:100%"><thead><tr><th style="text-align:left">File</th><th style="text-align:right">Tokens</th><th style="text-align:right">Reads</th><th style="text-align:right">Edits</th><th style="text-align:right">Writes</th></tr></thead><tbody>';
+      html += s.files.slice(0, 20).map(f => {
+        const shortPath = f.path.length > 70 ? '…' + f.path.slice(-68) : f.path;
+        return `<tr><td style="font-family:monospace" title="${f.path}">${shortPath}</td><td style="text-align:right">${fmt(f.input_tokens)}</td><td style="text-align:right">${f.tools.read||'\u2014'}</td><td style="text-align:right">${f.tools.edit||'\u2014'}</td><td style="text-align:right">${f.tools.write||'\u2014'}</td></tr>`;
+      }).join('');
+      if (s.files.length > 20) html += `<tr><td colspan="5" style="color:var(--text2);font-style:italic">…and ${s.files.length - 20} more files. <a href="#/files" style="color:var(--accent2)">View all in Files page →</a></td></tr>`;
+      html += '</tbody></table>';
     }
     if (!html) html = '<p style="color:var(--text2);font-size:0.85rem">No detail data available</p>';
     content.innerHTML = html;
@@ -760,6 +776,99 @@ function renderWarnings() {
   charts.warnType = new Chart($('#ch-warn-type'), {
     type: 'bar', data: { labels: typeEntries.map(e=>e[0].replace(/_/g,' ')), datasets: [{ label: 'Count', data: typeEntries.map(e=>e[1]), backgroundColor: '#a29bfe' }] },
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
+
+/* ── Files Page ── */
+function renderFiles() {
+  const r = currentReport;
+  const files = r.file_stats || [];
+
+  if (!files.length) {
+    $('#app').innerHTML = '<p style="color:var(--text2);padding:2rem">No file data in this report. Generate with <code>--use-real-session-name</code>.</p>';
+    return;
+  }
+
+  const totalTokens = files.reduce((s, f) => s + f.input_tokens, 0);
+  const totalCalls = files.reduce((s, f) => s + f.calls, 0);
+  const topFile = files[0];
+
+  // Directory aggregation
+  const dirMap = {};
+  files.forEach(f => {
+    const dir = f.directory || f.path.split('/').slice(0, -1).join('/') || '/';
+    if (!dirMap[dir]) dirMap[dir] = { dir, files: 0, calls: 0, input_tokens: 0 };
+    dirMap[dir].files++;
+    dirMap[dir].calls += f.calls;
+    dirMap[dir].input_tokens += f.input_tokens;
+  });
+  const dirs = Object.values(dirMap).sort((a, b) => b.input_tokens - a.input_tokens);
+
+  // Extension aggregation
+  const extMap = {};
+  files.forEach(f => {
+    const ext = f.path.includes('.') ? '.' + f.path.split('.').pop() : '(none)';
+    if (!extMap[ext]) extMap[ext] = { ext, files: 0, calls: 0, input_tokens: 0 };
+    extMap[ext].files++;
+    extMap[ext].calls += f.calls;
+    extMap[ext].input_tokens += f.input_tokens;
+  });
+  const exts = Object.values(extMap).sort((a, b) => b.input_tokens - a.input_tokens).slice(0, 12);
+
+  // Tool breakdown across all files
+  const toolTotals = {};
+  files.forEach(f => Object.entries(f.tools).forEach(([t, c]) => { toolTotals[t] = (toolTotals[t] || 0) + c; }));
+
+  const rows = files.map(f => {
+    const reads = f.tools.read || 0;
+    const edits = f.tools.edit || 0;
+    const writes = f.tools.write || 0;
+    const shortPath = f.path.length > 60 ? '…' + f.path.slice(-58) : f.path;
+    return `<tr>
+      <td title="${f.path}" style="font-size:0.75rem;font-family:monospace">${shortPath}</td>
+      <td class="num">${fmt(f.input_tokens)}</td>
+      <td class="num">${reads || '\u2014'}</td>
+      <td class="num">${edits || '\u2014'}</td>
+      <td class="num">${writes || '\u2014'}</td>
+      <td class="num">${f.sessions}</td>
+    </tr>`;
+  }).join('');
+
+  const topDir = dirs[0];
+
+  $('#app').innerHTML = `
+    <div class="cards">
+      <div class="card"><div class="card-label">Unique Files</div><div class="card-value accent">${files.length}</div><div class="card-sub">${dirs.length} directories</div></div>
+      <div class="card"><div class="card-label">File Token Cost</div><div class="card-value blue">${fmtM(totalTokens)}</div><div class="card-sub">${fmt(totalCalls)} tool calls</div></div>
+      <div class="card"><div class="card-label">Hottest File</div><div class="card-value" style="font-size:0.75rem;word-break:break-all">${topFile.path.split('/').pop()}</div><div class="card-sub">${fmtM(topFile.input_tokens)} tokens, ${topFile.calls} calls</div></div>
+      <div class="card"><div class="card-label">Top Directory</div><div class="card-value" style="font-size:0.75rem;word-break:break-all">${topDir ? topDir.dir.split('/').pop() || topDir.dir : '\u2014'}</div><div class="card-sub">${topDir ? fmtM(topDir.input_tokens)+' tokens, '+topDir.files+' files' : ''}</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-box"><h3>Top Directories by Token Cost</h3><div class="chart-wrap tall"><canvas id="ch-files-dirs"></canvas></div></div>
+      <div class="chart-box"><h3>File Types by Token Cost</h3><div class="chart-wrap tall"><canvas id="ch-files-exts"></canvas></div></div>
+    </div>
+    <div class="table-box"><h3>All Files <span style="font-size:0.75rem;color:var(--text2);font-weight:normal">(sorted by token cost)</span></h3>
+      <table><thead><tr><th>File</th><th class="num">Tokens</th><th class="num">Reads</th><th class="num">Edits</th><th class="num">Writes</th><th class="num">Sessions</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>`;
+
+  const topDirs = dirs.slice(0, 12);
+  charts.fileDirs = new Chart($('#ch-files-dirs'), {
+    type: 'bar',
+    data: {
+      labels: topDirs.map(d => d.dir.split('/').slice(-2).join('/') || d.dir),
+      datasets: [{ label: 'Tokens', data: topDirs.map(d => d.input_tokens), backgroundColor: COLORS[0] }]
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { callback: v => fmtM(v) } } }, plugins: { legend: { display: false } } }
+  });
+
+  charts.fileExts = new Chart($('#ch-files-exts'), {
+    type: 'bar',
+    data: {
+      labels: exts.map(e => e.ext),
+      datasets: [{ label: 'Tokens', data: exts.map(e => e.input_tokens), backgroundColor: COLORS[1] }]
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { callback: v => fmtM(v) } } }, plugins: { legend: { display: false } } }
   });
 }
 

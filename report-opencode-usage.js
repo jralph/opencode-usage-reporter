@@ -573,17 +573,62 @@ function buildSessionDetails(records) {
         b.tool_timeline.push({ tool: te.tool, start: te.start, end: te.end, tokens: te.tokens, depth: te.depth || 0, title: te.title });
       }
     }
+
+    // Per-file stats (opt-in, non-anonymous mode only)
+    if (useRealSessionName) {
+      if (!b.fileMap) b.fileMap = new Map();
+      for (const te of r.toolEvents) {
+        const filePath = te.args?.filePath;
+        if (!filePath || !['read', 'edit', 'write'].includes(te.tool)) continue;
+        if (!b.fileMap.has(filePath)) b.fileMap.set(filePath, { path: filePath, calls: 0, input_tokens: 0, tools: {} });
+        const f = b.fileMap.get(filePath);
+        f.calls++;
+        f.input_tokens += te.tokens || 0;
+        f.tools[te.tool] = (f.tools[te.tool] || 0) + 1;
+      }
+    }
   }
 
   return [...buckets.values()]
-    .map(s => ({
-      ...s,
-      started_at: new Date(s.started_at).toISOString(),
-      ended_at: new Date(s.ended_at).toISOString(),
-      agents: Object.keys(s.agents).length > 0 ? s.agents : undefined,
-      tool_timeline: s.tool_timeline.length > 0 ? s.tool_timeline.sort((a, b) => a.start - b.start) : undefined,
-    }))
+    .map(s => {
+      const files = s.fileMap && s.fileMap.size > 0
+        ? [...s.fileMap.values()].sort((a, b) => b.input_tokens - a.input_tokens)
+        : undefined;
+      const { fileMap: _fm, ...rest } = s;
+      return {
+        ...rest,
+        started_at: new Date(s.started_at).toISOString(),
+        ended_at: new Date(s.ended_at).toISOString(),
+        agents: Object.keys(s.agents).length > 0 ? s.agents : undefined,
+        tool_timeline: s.tool_timeline.length > 0 ? s.tool_timeline.sort((a, b) => a.start - b.start) : undefined,
+        files,
+      };
+    })
     .sort((a, b) => a.started_at.localeCompare(b.started_at));
+}
+
+// Aggregate per-session file stats into a global file_stats array.
+// Enriches each entry with the session's directory and a sessions count.
+function buildFileStats(sessions) {
+  if (!useRealSessionName) return undefined;
+  const fileMap = new Map();
+  for (const s of sessions) {
+    if (!s.files) continue;
+    for (const f of s.files) {
+      if (!fileMap.has(f.path)) {
+        fileMap.set(f.path, { path: f.path, calls: 0, input_tokens: 0, sessions: 0, directory: s.directory || null, tools: {} });
+      }
+      const entry = fileMap.get(f.path);
+      entry.calls += f.calls;
+      entry.input_tokens += f.input_tokens;
+      entry.sessions++;
+      for (const [tool, count] of Object.entries(f.tools)) {
+        entry.tools[tool] = (entry.tools[tool] || 0) + count;
+      }
+    }
+  }
+  if (fileMap.size === 0) return undefined;
+  return [...fileMap.values()].sort((a, b) => b.input_tokens - a.input_tokens);
 }
 
 function buildHourlyReport(records, period) {
@@ -626,8 +671,9 @@ function buildHourlyReport(records, period) {
   const tool_totals = aggregateTools(records);
   const sessions = buildSessionDetails(records);
   const warnings = detectWarnings(records, tool_totals, sessions);
+  const file_stats = buildFileStats(sessions);
 
-  return { report_type: 'hourly', period, generated_at: new Date().toISOString(), totals, model_totals, tool_totals, warnings, sessions, usage };
+  return { report_type: 'hourly', period, generated_at: new Date().toISOString(), totals, model_totals, tool_totals, warnings, file_stats, sessions, usage };
 }
 
 function buildSessionsReport(records, period) {
@@ -645,8 +691,9 @@ function buildSessionsReport(records, period) {
   const model_totals = buildModelTotals(records);
   const tool_totals = aggregateTools(records);
   const warnings = detectWarnings(records, tool_totals, sessions);
+  const file_stats = buildFileStats(sessions);
 
-  return { report_type: 'sessions', period, generated_at: new Date().toISOString(), totals, model_totals, tool_totals, warnings, sessions };
+  return { report_type: 'sessions', period, generated_at: new Date().toISOString(), totals, model_totals, tool_totals, warnings, file_stats, sessions };
 }
 
 // --- Main ---
