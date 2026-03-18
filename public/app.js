@@ -426,7 +426,7 @@ function renderTools() {
 /* ── Timeline Page ── */
 function renderTimeline() {
   const r = currentReport;
-  const usage = r.usage || r.sessions || [];
+  const usage = r.usage || [];
 
   if (!usage.length) {
     $('#app').innerHTML = '<p style="color:var(--text2);padding:2rem">No time-series data in this report.</p>';
