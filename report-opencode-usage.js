@@ -336,6 +336,7 @@ function gatherTokenWork(rawMessages) {
         toolMeta.set(id, {
           msgId: m.id, tool: p.tool, hasInput: !!inputText, hasOutput: !!outputText,
           args: p.state?.input || {},
+          error: !!(p.state?.error || p.state?.status === 'error'),
           start: p.state?.time?.start || null,
           end: p.state?.time?.end || null,
           partRef: p.tool === 'task' ? p : null,
@@ -370,7 +371,7 @@ function collectUsageData(sessions, cutoff) {
       toolEventsByMsg.get(meta.msgId).push(...flameEvents);
     } else if (meta.tool !== 'task') {
       toolEventsByMsg.get(meta.msgId).push({
-        tool: meta.tool, tokens: total, start: meta.start, end: meta.end, args: meta.args, depth: 0,
+        tool: meta.tool, tokens: total, start: meta.start, end: meta.end, args: meta.args, error: meta.error, depth: 0,
       });
     }
   }
@@ -533,6 +534,49 @@ function detectWarnings(records, toolTotals, sessionDetails) {
     if (rse > 0) {
       warnings.push({ type: 'read_then_small_edit', severity: 'warn', session_id: sid,
         detail: `${rse} full-file reads followed by small edits in session ${sid}. Partial reads would reduce token waste.` });
+    }
+
+    // Dead context detection
+    // 1. Duplicate reads: same file read multiple times with same/no params
+    const readKeys = new Map();
+    let dupReadTokens = 0, dupReadCount = 0;
+    for (const te of events) {
+      if (te.tool !== 'read') continue;
+      const file = te.args?.filePath || te.args?.path || '';
+      const key = `${file}|${te.args?.startLine || ''}|${te.args?.endLine || ''}|${te.args?.start_line || ''}|${te.args?.end_line || ''}`;
+      if (readKeys.has(key)) { dupReadCount++; dupReadTokens += te.tokens || 0; }
+      else readKeys.set(key, true);
+    }
+    if (dupReadCount > 3 && dupReadTokens > 5000) {
+      warnings.push({ type: 'duplicate_reads', severity: 'warn', session_id: sid,
+        detail: `${dupReadCount} duplicate file reads (${dupReadTokens} tokens) in session ${sid}. Same file read multiple times with same params.` });
+    }
+
+    // 2. Superseded writes: file written then read again (write content became stale context)
+    const writtenFiles = new Map();
+    let supersededTokens = 0, supersededCount = 0;
+    for (const te of events) {
+      const file = te.args?.filePath || te.args?.path || '';
+      if (!file) continue;
+      if (te.tool === 'write' || te.tool === 'edit') {
+        writtenFiles.set(file, te.tokens || 0);
+      } else if (te.tool === 'read' && writtenFiles.has(file)) {
+        supersededTokens += writtenFiles.get(file);
+        supersededCount++;
+        writtenFiles.delete(file);
+      }
+    }
+    if (supersededCount > 2 && supersededTokens > 3000) {
+      warnings.push({ type: 'superseded_writes', severity: 'info', session_id: sid,
+        detail: `${supersededCount} writes superseded by later reads (~${supersededTokens} tokens) in session ${sid}. Write content became stale context.` });
+    }
+
+    // 3. Errored tool inputs: tool calls that failed (input tokens wasted)
+    const errored = events.filter(te => te.error && (te.tokens || 0) > 500);
+    if (errored.length > 0) {
+      const erroredTokens = errored.reduce((s, te) => s + (te.tokens || 0), 0);
+      warnings.push({ type: 'errored_tool_inputs', severity: 'warn', session_id: sid,
+        detail: `${errored.length} errored tool calls (${erroredTokens} tokens) in session ${sid}. Failed tool inputs wasted context.` });
     }
   }
 

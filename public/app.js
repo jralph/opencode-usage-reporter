@@ -200,6 +200,10 @@ function renderDashboard() {
     if (c) totalCost += c;
   });
 
+  const deadContextTypes = new Set(['duplicate_reads', 'superseded_writes', 'errored_tool_inputs', 'read_then_small_edit', 'inefficient_reads', 'unbounded_bash', 'excessive_full_reads', 'expensive_full_reads']);
+  const deadWarnings = (r.warnings || []).filter(w => deadContextTypes.has(w.type));
+  const deadSessions = new Set(deadWarnings.map(w => w.session_id).filter(Boolean)).size;
+
   const app = $('#app');
   app.innerHTML = `
     <div class="cards">
@@ -208,7 +212,7 @@ function renderDashboard() {
       <div class="card"><div class="card-label">Tool Tokens</div><div class="card-value green">${fmtM(t.tool_input_tokens)}</div><div class="card-sub">${toolPct}% of input</div></div>
       <div class="card"><div class="card-label">Human Input</div><div class="card-value">${fmtM(t.human_input_tokens || 0)}</div><div class="card-sub">${pct(t.human_input_tokens || 0, t.input_tokens)} of input</div></div>
       <div class="card"><div class="card-label">Est. API Cost</div><div class="card-value yellow">${totalCost > 0 ? '$'+totalCost.toFixed(2) : 'N/A'}</div><div class="card-sub">Based on known model rates</div></div>
-      <div class="card"><div class="card-label">Models Used</div><div class="card-value">${(r.model_totals||[]).length}</div><div class="card-sub">${new Set((r.model_totals||[]).map(m=>m.provider)).size} providers</div></div>
+      <div class="card"><div class="card-label">Dead Context</div><div class="card-value" style="color:${deadWarnings.length ? 'var(--red)' : 'var(--green)'}">${deadWarnings.length}</div><div class="card-sub">${deadSessions} sessions · <a href="#/warnings" style="color:var(--accent2)">details →</a></div></div>
       <div class="card"><div class="card-label">Estimated Tokens</div><div class="card-value">${fmtM(t.estimated_tokens)}</div><div class="card-sub">${pct(t.estimated_tokens, totalTokens)} of total (not API-reported)</div></div>
       <div class="card"><div class="card-label">Period</div><div class="card-value" style="font-size:1.1rem">${r.period.days}d</div><div class="card-sub">${new Date(r.period.start).toLocaleDateString()} – ${new Date(r.period.end).toLocaleDateString()}</div></div>
     </div>
@@ -651,18 +655,21 @@ function renderSessions() {
   };
 
   const hasFileData = !!r.file_stats;
+  const warnsBySession = {};
+  (r.warnings || []).forEach(w => { if (w.session_id) warnsBySession[w.session_id] = (warnsBySession[w.session_id] || 0) + 1; });
   let totalCost = 0;
   let rows = sorted.map((s, idx) => {
     const total = s.input_tokens + s.output_tokens;
     const cost = estimateCost(s.input_tokens, s.output_tokens, s.model);
     if (cost) totalCost += cost;
-    const hasDetail = (s.agents && Object.keys(s.agents).length > 0) || (s.tool_timeline && s.tool_timeline.length > 0);
+    const hasDetail = (s.agents && Object.keys(s.agents).length > 0) || (s.tool_timeline && s.tool_timeline.length > 0) || warnsBySession[s.session_id];
     const toolCalls = s.tool_calls || 0;
     const agentCount = s.agents ? Object.keys(s.agents).length : 0;
     const fileCount = s.files ? s.files.length : null;
     const fc = s.file_changes;
     const changesCell = fc ? `<span style="color:#00b894">+${fmt(fc.additions)}</span> <span style="color:#d63031">-${fmt(fc.deletions)}</span>` : '\u2014';
-    const colCount = fileCount !== null ? 14 : 13;
+    const sessWarnCount = warnsBySession[s.session_id] || 0;
+    const colCount = fileCount !== null ? 15 : 14;
     return `<tr class="${hasDetail ? 'session-detail' : ''}" ${hasDetail ? `onclick="toggleSessionDetail(${idx})"` : ''}>
       <td>${s.session_title || s.session_id?.slice(0,8) || '\u2014'}</td>
       <td><span class="${badgeClass(s.provider)}">${s.provider}</span></td>
@@ -675,6 +682,7 @@ function renderSessions() {
       <td class="num">${cost != null ? '$'+cost.toFixed(2) : '\u2014'}</td>
       <td class="num">${dur(s)}</td>
       <td class="num" style="font-size:0.8rem;white-space:nowrap">${changesCell}</td>
+      <td class="num">${sessWarnCount ? `<span style="color:var(--red)" title="${sessWarnCount} warnings">⚠ ${sessWarnCount}</span>` : '\u2014'}</td>
       <td style="font-size:0.75rem;color:var(--text2)" title="${s.directory||''}">${s.directory ? s.directory.split('/').slice(-2).join('/') : '\u2014'}</td>
       <td style="font-size:0.75rem;color:var(--text2)">${s.started_at ? new Date(s.started_at).toLocaleString() : '\u2014'}</td>
       ${fileCount !== null ? `<td class="num" style="color:var(--accent2)">${fileCount}</td>` : ''}
@@ -686,6 +694,7 @@ function renderSessions() {
 
   const totalAdds = sorted.reduce((s,x) => s + (x.file_changes?.additions || 0), 0);
   const totalDels = sorted.reduce((s,x) => s + (x.file_changes?.deletions || 0), 0);
+  const totalWarnCount = Object.values(warnsBySession).reduce((s, v) => s + v, 0);
   rows += totalsRow([
     {v:`${sorted.length} sessions`,cls:''},{v:'',cls:''},{v:'Total',cls:''},
     {v:fmt(totalTokens),cls:'num'},{v:fmt(totalReqs),cls:'num'},
@@ -695,6 +704,7 @@ function renderSessions() {
     {v:totalCost>0?'$'+totalCost.toFixed(2):'\u2014',cls:'num'},
     {v:'',cls:'num'},
     {v:`<span style="color:#00b894">+${fmt(totalAdds)}</span> <span style="color:#d63031">-${fmt(totalDels)}</span>`,cls:'num'},
+    {v:totalWarnCount?`⚠ ${totalWarnCount}`:'\u2014',cls:'num'},
     {v:'',cls:''},{v:'',cls:''},
   ]);
 
@@ -718,7 +728,7 @@ function renderSessions() {
       <div class="chart-box"><h3>Tokens by Model</h3><div class="chart-wrap"><canvas id="ch-sess-model"></canvas></div></div>
     </div>
     <div class="table-box"><h3>All Sessions <span style="font-size:0.75rem;color:var(--text2);font-weight:normal">(click rows with agent/tool data to expand)</span></h3>
-      <table><thead><tr><th>Title</th><th>Provider</th><th>Model</th><th class="num">Tokens</th><th class="num">Requests</th><th class="num">Agents</th><th class="num">Tool Calls</th><th class="num">Tool Tokens</th><th class="num">Est. Cost</th><th class="num">Duration</th><th class="num">Changes</th><th>Project</th><th>Started</th>${hasFileData ? '<th class="num"><a href="#/files" style="color:var(--accent2)">Files ↗</a></th>' : ''}</tr></thead>
+      <table><thead><tr><th>Title</th><th>Provider</th><th>Model</th><th class="num">Tokens</th><th class="num">Requests</th><th class="num">Agents</th><th class="num">Tool Calls</th><th class="num">Tool Tokens</th><th class="num">Est. Cost</th><th class="num">Duration</th><th class="num">Changes</th><th class="num">⚠</th><th>Project</th><th>Started</th>${hasFileData ? '<th class="num"><a href="#/files" style="color:var(--accent2)">Files ↗</a></th>' : ''}</tr></thead>
       <tbody>${rows}</tbody></table>
     </div>`;
 
@@ -774,6 +784,13 @@ window.toggleSessionDetail = function(idx) {
       html += '<h3 style="font-size:0.9rem;color:var(--text2);margin:1rem 0 0.5rem">File Activity</h3>';
       html += `<div style="font-size:0.85rem">${fc.unique_files} files · ${fc.reads} reads${fc.full_reads ? ` (${fc.full_reads} full)` : ''} · ${fc.edits} edits · ${fc.writes} writes · <span style="color:#00b894">+${fmt(fc.additions)}</span> <span style="color:#d63031">-${fmt(fc.deletions)}</span></div>`;
     }
+    // Session-specific warnings
+    const r = getFilteredReport();
+    const sessWarnings = (r.warnings || []).filter(w => w.session_id === s.session_id);
+    if (sessWarnings.length > 0) {
+      html += '<h3 style="font-size:0.9rem;color:var(--text2);margin:1rem 0 0.5rem">Warnings</h3>';
+      html += sessWarnings.map(w => `<div style="font-size:0.8rem;padding:0.4rem 0.6rem;margin-bottom:0.3rem;background:var(--surface);border-radius:4px;border-left:3px solid ${w.severity==='severe'?'var(--red)':w.severity==='warn'?'var(--yellow)':'var(--blue)'}"><strong>${w.type.replace(/_/g,' ')}</strong>: ${w.detail.replace(/ in session \w+\.?/,'')}</div>`).join('');
+    }
     if (!html) html = '<p style="color:var(--text2);font-size:0.85rem">No detail data available</p>';
     content.innerHTML = html;
     content.dataset.loaded = '1';
@@ -797,6 +814,10 @@ function renderWarnings() {
     byType[w.type] = (byType[w.type] || 0) + 1;
   });
 
+  const deadContextTypes = new Set(['duplicate_reads', 'superseded_writes', 'errored_tool_inputs', 'read_then_small_edit', 'inefficient_reads', 'unbounded_bash', 'excessive_full_reads', 'expensive_full_reads']);
+  const deadCount = warnings.filter(w => deadContextTypes.has(w.type)).length;
+  const wasteCount = warnings.filter(w => ['excessive_iteration','wasted_compute','low_token_efficiency','output_heavy','long_running'].includes(w.type)).length;
+
   const items = warnings.map(w =>
     `<div class="warning-item ${w.severity}"><div class="warning-type">${w.type.replace(/_/g, ' ')}</div><div class="warning-detail">${w.detail}${w.session_id ? ' <span style="color:var(--text2);font-size:0.75rem">('+w.session_id.slice(0,8)+'…)</span>' : ''}</div></div>`
   ).join('');
@@ -807,6 +828,8 @@ function renderWarnings() {
       <div class="card"><div class="card-label">Severe</div><div class="card-value" style="color:var(--red)">${bySeverity.severe||0}</div></div>
       <div class="card"><div class="card-label">Warnings</div><div class="card-value yellow">${bySeverity.warn||0}</div></div>
       <div class="card"><div class="card-label">Info</div><div class="card-value blue">${bySeverity.info||0}</div></div>
+      <div class="card"><div class="card-label">Dead Context</div><div class="card-value" style="color:${deadCount ? '#e17055' : 'var(--green)'}">${deadCount}</div><div class="card-sub">Wasted tokens from stale/duplicate context</div></div>
+      <div class="card"><div class="card-label">Session Waste</div><div class="card-value" style="color:${wasteCount ? '#fdcb6e' : 'var(--green)'}">${wasteCount}</div><div class="card-sub">Inefficient session patterns</div></div>
     </div>
     <div class="chart-grid">
       <div class="chart-box"><h3>By Severity</h3><div class="chart-wrap"><canvas id="ch-warn-sev"></canvas></div></div>
