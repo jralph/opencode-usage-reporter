@@ -406,6 +406,7 @@ function collectUsageData(sessions, cutoff) {
       model,
       inputTokens,
       outputTokens,
+      humanInputTokens: m.role === 'user' ? inputTokens : 0,
       estimated,
       tools,
       toolEvents,
@@ -433,11 +434,12 @@ function buildModelTotals(records) {
   const modelMap = new Map();
   for (const r of records) {
     const key = `${r.provider}|${r.model}`;
-    if (!modelMap.has(key)) modelMap.set(key, { provider: r.provider, model: r.model, input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, requests: 0 });
+    if (!modelMap.has(key)) modelMap.set(key, { provider: r.provider, model: r.model, input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, human_input_tokens: 0, requests: 0 });
     const b = modelMap.get(key);
     b.input_tokens += r.inputTokens;
     b.output_tokens += r.outputTokens;
     if (r.estimated) b.estimated_tokens += r.inputTokens + r.outputTokens;
+    b.human_input_tokens += r.humanInputTokens;
     for (const t of r.tools) b.tool_input_tokens += t.inputTokens;
     b.requests++;
   }
@@ -482,22 +484,56 @@ function detectWarnings(records, toolTotals, sessionDetails) {
           detail: `${mins}m duration for session ${s.session_id}. May indicate stuck or slow processing.` });
       }
     }
-  }
-
-  // Inefficient reads: read tool calls without offset/limit/startLine/endLine
-  const inefficientReads = [];
-  for (const r of records) {
-    for (const te of r.toolEvents) {
-      if (te.tool === 'read' && te.args && !te.args.offset && !te.args.limit && !te.args.startLine && !te.args.endLine && !te.args.start_line && !te.args.end_line) {
-        inefficientReads.push({ file: te.args.filePath || te.args.path || te.args.file || 'unknown', session_id: r.sessionId, tokens: te.tokens });
+    // Excessive full-file reads: >10 full reads or >50k tokens from full reads
+    if (s.file_changes) {
+      const fc = s.file_changes;
+      if (fc.full_reads > 10) {
+        warnings.push({ type: 'excessive_full_reads', severity: 'warn', session_id: s.session_id,
+          detail: `${fc.full_reads} full-file reads (${fc.full_read_tokens} tokens) in session ${s.session_id}. Use partial reads to reduce context.` });
+      } else if (fc.full_read_tokens > 50000) {
+        warnings.push({ type: 'expensive_full_reads', severity: 'warn', session_id: s.session_id,
+          detail: `${fc.full_read_tokens} tokens from ${fc.full_reads} full-file reads in session ${s.session_id}. Large files being read entirely.` });
       }
     }
   }
-  if (inefficientReads.length > 0) {
-    const totalTok = inefficientReads.reduce((s, r) => s + r.tokens, 0);
-    warnings.push({ type: 'inefficient_reads', severity: 'warn',
-      detail: `${inefficientReads.length} full-file reads without offset/limit (${totalTok} tokens). Use partial reads to reduce context.`,
-      reads: inefficientReads });
+
+  // Per-session tool event warnings (inefficient reads, unbounded bash, read-then-small-edit)
+  const boundedPipe = /\|\s*(head|tail|wc|grep|awk|sed|cut|sort|uniq|less|more)\b/;
+  const bySession = new Map();
+  for (const r of records) {
+    if (!bySession.has(r.sessionId)) bySession.set(r.sessionId, []);
+    bySession.get(r.sessionId).push(...r.toolEvents.map(te => ({ ...te, sessionId: r.sessionId })));
+  }
+  for (const [sid, events] of bySession) {
+    // Inefficient reads
+    const fullReads = events.filter(te => te.tool === 'read' && te.args && !te.args.offset && !te.args.limit && !te.args.startLine && !te.args.endLine && !te.args.start_line && !te.args.end_line);
+    if (fullReads.length > 5) {
+      const totalTok = fullReads.reduce((s, te) => s + (te.tokens || 0), 0);
+      warnings.push({ type: 'inefficient_reads', severity: 'warn', session_id: sid,
+        detail: `${fullReads.length} full-file reads without offset/limit (${totalTok} tokens) in session ${sid}. Use partial reads to reduce context.` });
+    }
+    // Unbounded bash
+    const unbounded = events.filter(te => te.tool === 'bash' && (te.args?.command || te.args?.cmd) && !boundedPipe.test(te.args?.command || te.args?.cmd || '') && (te.tokens || 0) > 2000);
+    if (unbounded.length > 0) {
+      warnings.push({ type: 'unbounded_bash', severity: 'warn', session_id: sid,
+        detail: `${unbounded.length} bash commands with >2k output tokens and no pipe to head/tail/grep in session ${sid}. Pipe output to limit context waste.` });
+    }
+    // Read-then-small-edit
+    let rse = 0;
+    for (let i = 1; i < events.length; i++) {
+      const prev = events[i - 1], cur = events[i];
+      if (prev.tool !== 'read' || !['edit', 'write'].includes(cur.tool)) continue;
+      const prevFile = prev.args?.filePath || prev.args?.path || '';
+      const curFile = cur.args?.filePath || cur.args?.path || '';
+      if (!prevFile || prevFile !== curFile) continue;
+      if (prev.args?.offset || prev.args?.limit || prev.args?.startLine || prev.args?.endLine || prev.args?.start_line || prev.args?.end_line) continue;
+      const editSize = (cur.args?.new_str || cur.args?.newStr || cur.args?.content || cur.args?.file_text || '').length;
+      if ((prev.tokens || 0) > 1000 && editSize < 500) rse++;
+    }
+    if (rse > 0) {
+      warnings.push({ type: 'read_then_small_edit', severity: 'warn', session_id: sid,
+        detail: `${rse} full-file reads followed by small edits in session ${sid}. Partial reads would reduce token waste.` });
+    }
   }
 
   // Tool dominance: single tool >60% of all tool tokens
@@ -540,6 +576,7 @@ function buildSessionDetails(records) {
         tool_input_tokens: 0,
         tool_output_tokens: 0,
         tool_calls: 0,
+        human_input_tokens: 0,
         requests: 0,
         agents: {},
         tool_timeline: [],
@@ -549,6 +586,7 @@ function buildSessionDetails(records) {
     b.input_tokens += r.inputTokens;
     b.output_tokens += r.outputTokens;
     if (r.estimated) b.estimated_tokens += r.inputTokens + r.outputTokens;
+    b.human_input_tokens += r.humanInputTokens;
     for (const t of r.tools) {
       b.tool_input_tokens += t.inputTokens;
       b.tool_output_tokens += t.outputTokens;
@@ -561,16 +599,40 @@ function buildSessionDetails(records) {
 
     // Agent tracking
     if (r.agent) {
-      if (!b.agents[r.agent]) b.agents[r.agent] = { requests: 0, input_tokens: 0, output_tokens: 0 };
+      if (!b.agents[r.agent]) b.agents[r.agent] = { requests: 0, input_tokens: 0, output_tokens: 0, model: r.model };
       b.agents[r.agent].requests++;
       b.agents[r.agent].input_tokens += r.inputTokens;
       b.agents[r.agent].output_tokens += r.outputTokens;
+      if (r.model) b.agents[r.agent].model = r.model;
     }
 
     // Tool timeline events for flame graph
     for (const te of r.toolEvents) {
       if (te.start && te.end) {
         b.tool_timeline.push({ tool: te.tool, start: te.start, end: te.end, tokens: te.tokens, depth: te.depth || 0, title: te.title });
+      }
+    }
+
+    // Per-file anonymous summary (always)
+    for (const te of r.toolEvents) {
+      if (!te.args?.filePath || !['read', 'edit', 'write'].includes(te.tool)) continue;
+      if (!b.fileChanges) b.fileChanges = { reads: 0, edits: 0, writes: 0, full_reads: 0, full_read_tokens: 0, unique_files: new Set(), additions: 0, deletions: 0 };
+      b.fileChanges[te.tool === 'read' ? 'reads' : te.tool === 'edit' ? 'edits' : 'writes']++;
+      b.fileChanges.unique_files.add(te.args.filePath);
+      if (te.tool === 'read' && !te.args.offset && !te.args.limit && !te.args.startLine && !te.args.endLine && !te.args.start_line && !te.args.end_line) {
+        b.fileChanges.full_reads++;
+        b.fileChanges.full_read_tokens += te.tokens || 0;
+      }
+      b.fileChanges.unique_files.add(te.args.filePath);
+      const countLines = s => (typeof s === 'string' && s.length > 0) ? s.split('\n').length : 0;
+      if (te.tool === 'edit') {
+        const oldStr = te.args.old_str || te.args.oldStr || '';
+        const newStr = te.args.new_str || te.args.newStr || '';
+        b.fileChanges.deletions += countLines(oldStr);
+        b.fileChanges.additions += countLines(newStr);
+      } else if (te.tool === 'write') {
+        const content = te.args.content || te.args.file_text || '';
+        b.fileChanges.additions += countLines(content);
       }
     }
 
@@ -594,13 +656,17 @@ function buildSessionDetails(records) {
       const files = s.fileMap && s.fileMap.size > 0
         ? [...s.fileMap.values()].sort((a, b) => b.input_tokens - a.input_tokens)
         : undefined;
-      const { fileMap: _fm, ...rest } = s;
+      const { fileMap: _fm, fileChanges: _fc, ...rest } = s;
+      const file_changes = s.fileChanges
+        ? { reads: s.fileChanges.reads, edits: s.fileChanges.edits, writes: s.fileChanges.writes, unique_files: s.fileChanges.unique_files.size, additions: s.fileChanges.additions, deletions: s.fileChanges.deletions, full_reads: s.fileChanges.full_reads, full_read_tokens: s.fileChanges.full_read_tokens }
+        : undefined;
       return {
         ...rest,
         started_at: new Date(s.started_at).toISOString(),
         ended_at: new Date(s.ended_at).toISOString(),
         agents: Object.keys(s.agents).length > 0 ? s.agents : undefined,
         tool_timeline: s.tool_timeline.length > 0 ? s.tool_timeline.sort((a, b) => a.start - b.start) : undefined,
+        file_changes,
         files,
       };
     })
@@ -638,12 +704,13 @@ function buildHourlyReport(records, period) {
     const hour = floorToHour(r.created);
     const key = `${hour}|${r.provider}|${r.model}`;
     if (!buckets.has(key)) {
-      buckets.set(key, { hour, provider: r.provider, model: r.model, input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, requests: 0, tools: new Map() });
+      buckets.set(key, { hour, provider: r.provider, model: r.model, input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, human_input_tokens: 0, requests: 0, tools: new Map() });
     }
     const b = buckets.get(key);
     b.input_tokens += r.inputTokens;
     b.output_tokens += r.outputTokens;
     if (r.estimated) b.estimated_tokens += r.inputTokens + r.outputTokens;
+    b.human_input_tokens += r.humanInputTokens;
     for (const t of r.tools) {
       b.tool_input_tokens += t.inputTokens;
       if (!b.tools.has(t.tool)) b.tools.set(t.tool, { calls: 0, input_tokens: 0 });
@@ -663,9 +730,10 @@ function buildHourlyReport(records, period) {
     t.output_tokens += u.output_tokens;
     t.estimated_tokens += u.estimated_tokens;
     t.tool_input_tokens += u.tool_input_tokens;
+    t.human_input_tokens += u.human_input_tokens;
     t.requests += u.requests;
     return t;
-  }, { input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, requests: 0 });
+  }, { input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, human_input_tokens: 0, requests: 0 });
 
   const model_totals = buildModelTotals(records);
   const tool_totals = aggregateTools(records);
@@ -684,9 +752,10 @@ function buildSessionsReport(records, period) {
     t.output_tokens += s.output_tokens;
     t.estimated_tokens += s.estimated_tokens;
     t.tool_input_tokens += s.tool_input_tokens;
+    t.human_input_tokens += s.human_input_tokens;
     t.requests += s.requests;
     return t;
-  }, { input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, requests: 0 });
+  }, { input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, human_input_tokens: 0, requests: 0 });
 
   const model_totals = buildModelTotals(records);
   const tool_totals = aggregateTools(records);

@@ -53,7 +53,7 @@ Chart.defaults.font.size = 11;
 
 /* ── Merge reports ── */
 function mergeReports(reportDataList) {
-  const totals = { input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, requests: 0 };
+  const totals = { input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, human_input_tokens: 0, requests: 0 };
   const modelMap = {};
   const toolMap = {};
   const allUsage = [];
@@ -75,8 +75,8 @@ function mergeReports(reportDataList) {
     // model_totals — merge by provider+model
     (r.model_totals || []).forEach(m => {
       const key = m.provider + '|' + m.model;
-      if (!modelMap[key]) modelMap[key] = { provider: m.provider, model: m.model, input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, requests: 0 };
-      ['input_tokens','output_tokens','estimated_tokens','tool_input_tokens','requests'].forEach(k => modelMap[key][k] += m[k] || 0);
+      if (!modelMap[key]) modelMap[key] = { provider: m.provider, model: m.model, input_tokens: 0, output_tokens: 0, estimated_tokens: 0, tool_input_tokens: 0, human_input_tokens: 0, requests: 0 };
+      ['input_tokens','output_tokens','estimated_tokens','tool_input_tokens','human_input_tokens','requests'].forEach(k => modelMap[key][k] += m[k] || 0);
     });
 
     // tool_totals — merge by tool name
@@ -206,6 +206,7 @@ function renderDashboard() {
       <div class="card"><div class="card-label">Total Tokens</div><div class="card-value accent">${fmtM(totalTokens)}</div><div class="card-sub">${fmt(t.input_tokens)} in / ${fmt(t.output_tokens)} out</div></div>
       <div class="card"><div class="card-label">Requests</div><div class="card-value blue">${fmt(t.requests)}</div><div class="card-sub">~${fmt(avgPerReq)} tokens/req</div></div>
       <div class="card"><div class="card-label">Tool Tokens</div><div class="card-value green">${fmtM(t.tool_input_tokens)}</div><div class="card-sub">${toolPct}% of input</div></div>
+      <div class="card"><div class="card-label">Human Input</div><div class="card-value">${fmtM(t.human_input_tokens || 0)}</div><div class="card-sub">${pct(t.human_input_tokens || 0, t.input_tokens)} of input</div></div>
       <div class="card"><div class="card-label">Est. API Cost</div><div class="card-value yellow">${totalCost > 0 ? '$'+totalCost.toFixed(2) : 'N/A'}</div><div class="card-sub">Based on known model rates</div></div>
       <div class="card"><div class="card-label">Models Used</div><div class="card-value">${(r.model_totals||[]).length}</div><div class="card-sub">${new Set((r.model_totals||[]).map(m=>m.provider)).size} providers</div></div>
       <div class="card"><div class="card-label">Estimated Tokens</div><div class="card-value">${fmtM(t.estimated_tokens)}</div><div class="card-sub">${pct(t.estimated_tokens, totalTokens)} of total (not API-reported)</div></div>
@@ -315,6 +316,7 @@ function renderModels() {
       <td class="num">${fmt(m.output_tokens)}</td>
       <td class="num">${fmt(total)}</td>
       <td class="num">${fmt(m.tool_input_tokens)}</td>
+      <td class="num">${fmt(m.human_input_tokens || 0)}</td>
       <td class="num">${fmt(m.requests)}</td>
       <td class="num">${fmt(avgPerReq)}</td>
       <td class="num">${ioRatio}%</td>
@@ -324,10 +326,12 @@ function renderModels() {
     </tr>`;
   }).join('');
 
+  const tHuman = models.reduce((s,m) => s+(m.human_input_tokens||0), 0);
+
   tableRows += totalsRow([
     {v:'',cls:''},{v:'Total',cls:''},
     {v:fmt(tIn),cls:'num'},{v:fmt(tOut),cls:'num'},{v:fmt(tTotal),cls:'num'},
-    {v:fmt(tTool),cls:'num'},{v:fmt(tReqs),cls:'num'},{v:fmt(tAvg),cls:'num'},
+    {v:fmt(tTool),cls:'num'},{v:fmt(tHuman),cls:'num'},{v:fmt(tReqs),cls:'num'},{v:fmt(tAvg),cls:'num'},
     {v:tRatio+'%',cls:'num'},{v:'',cls:'num'},{v:'',cls:'num'},
     {v:tCost>0?'$'+tCost.toFixed(2):'—',cls:'num'},
   ]);
@@ -348,7 +352,7 @@ function renderModels() {
       <div class="chart-box"><h3>Input vs Output by Model</h3><div class="chart-wrap"><canvas id="ch-model-io"></canvas></div></div>
     </div>
     <div class="table-box"><h3>Model Details</h3>
-      <table><thead><tr><th>Provider</th><th>Model</th><th class="num">Input</th><th class="num">Output</th><th class="num">Total</th><th class="num">Tool Tokens</th><th class="num">Requests</th><th class="num">Avg/Req</th><th class="num">Out/In</th><th class="num">$/1M In</th><th class="num">$/1M Out</th><th class="num">Est. Cost</th></tr></thead>
+      <table><thead><tr><th>Provider</th><th>Model</th><th class="num">Input</th><th class="num">Output</th><th class="num">Total</th><th class="num">Tool Tokens</th><th class="num">Human Input</th><th class="num">Requests</th><th class="num">Avg/Req</th><th class="num">Out/In</th><th class="num">$/1M In</th><th class="num">$/1M Out</th><th class="num">Est. Cost</th></tr></thead>
       <tbody>${tableRows}</tbody></table>
     </div>`;
 
@@ -654,18 +658,23 @@ function renderSessions() {
     if (cost) totalCost += cost;
     const hasDetail = (s.agents && Object.keys(s.agents).length > 0) || (s.tool_timeline && s.tool_timeline.length > 0);
     const toolCalls = s.tool_calls || 0;
+    const agentCount = s.agents ? Object.keys(s.agents).length : 0;
     const fileCount = s.files ? s.files.length : null;
-    const colCount = fileCount !== null ? 12 : 11;
+    const fc = s.file_changes;
+    const changesCell = fc ? `<span style="color:#00b894">+${fmt(fc.additions)}</span> <span style="color:#d63031">-${fmt(fc.deletions)}</span>` : '\u2014';
+    const colCount = fileCount !== null ? 14 : 13;
     return `<tr class="${hasDetail ? 'session-detail' : ''}" ${hasDetail ? `onclick="toggleSessionDetail(${idx})"` : ''}>
       <td>${s.session_title || s.session_id?.slice(0,8) || '\u2014'}</td>
       <td><span class="${badgeClass(s.provider)}">${s.provider}</span></td>
       <td>${s.model}</td>
       <td class="num">${fmt(total)}</td>
       <td class="num">${fmt(s.requests)}</td>
+      <td class="num">${agentCount || '\u2014'}</td>
       <td class="num">${fmt(toolCalls)}</td>
       <td class="num">${fmt(s.tool_input_tokens)}</td>
       <td class="num">${cost != null ? '$'+cost.toFixed(2) : '\u2014'}</td>
       <td class="num">${dur(s)}</td>
+      <td class="num" style="font-size:0.8rem;white-space:nowrap">${changesCell}</td>
       <td style="font-size:0.75rem;color:var(--text2)" title="${s.directory||''}">${s.directory ? s.directory.split('/').slice(-2).join('/') : '\u2014'}</td>
       <td style="font-size:0.75rem;color:var(--text2)">${s.started_at ? new Date(s.started_at).toLocaleString() : '\u2014'}</td>
       ${fileCount !== null ? `<td class="num" style="color:var(--accent2)">${fileCount}</td>` : ''}
@@ -675,13 +684,18 @@ function renderSessions() {
     </td></tr>`;
   }).join('');
 
+  const totalAdds = sorted.reduce((s,x) => s + (x.file_changes?.additions || 0), 0);
+  const totalDels = sorted.reduce((s,x) => s + (x.file_changes?.deletions || 0), 0);
   rows += totalsRow([
     {v:`${sorted.length} sessions`,cls:''},{v:'',cls:''},{v:'Total',cls:''},
     {v:fmt(totalTokens),cls:'num'},{v:fmt(totalReqs),cls:'num'},
+    {v:'',cls:'num'},
     {v:fmt(sorted.reduce((s,x)=>s+(x.tool_calls||0),0)),cls:'num'},
     {v:fmt(sorted.reduce((s,x)=>s+x.tool_input_tokens,0)),cls:'num'},
     {v:totalCost>0?'$'+totalCost.toFixed(2):'\u2014',cls:'num'},
-    {v:'',cls:'num'},{v:'',cls:''},{v:'',cls:''},
+    {v:'',cls:'num'},
+    {v:`<span style="color:#00b894">+${fmt(totalAdds)}</span> <span style="color:#d63031">-${fmt(totalDels)}</span>`,cls:'num'},
+    {v:'',cls:''},{v:'',cls:''},
   ]);
 
   // Warning summary for sessions page
@@ -704,7 +718,7 @@ function renderSessions() {
       <div class="chart-box"><h3>Tokens by Model</h3><div class="chart-wrap"><canvas id="ch-sess-model"></canvas></div></div>
     </div>
     <div class="table-box"><h3>All Sessions <span style="font-size:0.75rem;color:var(--text2);font-weight:normal">(click rows with agent/tool data to expand)</span></h3>
-      <table><thead><tr><th>Title</th><th>Provider</th><th>Model</th><th class="num">Tokens</th><th class="num">Requests</th><th class="num">Tool Calls</th><th class="num">Tool Tokens</th><th class="num">Est. Cost</th><th class="num">Duration</th><th>Project</th><th>Started</th>${hasFileData ? '<th class="num"><a href="#/files" style="color:var(--accent2)">Files ↗</a></th>' : ''}</tr></thead>
+      <table><thead><tr><th>Title</th><th>Provider</th><th>Model</th><th class="num">Tokens</th><th class="num">Requests</th><th class="num">Agents</th><th class="num">Tool Calls</th><th class="num">Tool Tokens</th><th class="num">Est. Cost</th><th class="num">Duration</th><th class="num">Changes</th><th>Project</th><th>Started</th>${hasFileData ? '<th class="num"><a href="#/files" style="color:var(--accent2)">Files ↗</a></th>' : ''}</tr></thead>
       <tbody>${rows}</tbody></table>
     </div>`;
 
@@ -755,6 +769,10 @@ window.toggleSessionDetail = function(idx) {
       }).join('');
       if (s.files.length > 20) html += `<tr><td colspan="5" style="color:var(--text2);font-style:italic">…and ${s.files.length - 20} more files. <a href="#/files" style="color:var(--accent2)">View all in Files page →</a></td></tr>`;
       html += '</tbody></table>';
+    } else if (s.file_changes) {
+      const fc = s.file_changes;
+      html += '<h3 style="font-size:0.9rem;color:var(--text2);margin:1rem 0 0.5rem">File Activity</h3>';
+      html += `<div style="font-size:0.85rem">${fc.unique_files} files · ${fc.reads} reads${fc.full_reads ? ` (${fc.full_reads} full)` : ''} · ${fc.edits} edits · ${fc.writes} writes · <span style="color:#00b894">+${fmt(fc.additions)}</span> <span style="color:#d63031">-${fmt(fc.deletions)}</span></div>`;
     }
     if (!html) html = '<p style="color:var(--text2);font-size:0.85rem">No detail data available</p>';
     content.innerHTML = html;
@@ -986,8 +1004,9 @@ function renderAgentFlowChart(agents) {
     const color = COLORS[i % COLORS.length];
     html += `<div style="display:flex;align-items:center;gap:8px;font-size:0.8rem">
       <span style="min-width:100px;color:var(--text2)">${name}</span>
-      <div style="flex:1;height:16px;background:var(--surface2);border-radius:3px;overflow:hidden">
+      <div style="flex:1;height:16px;background:var(--surface2);border-radius:3px;overflow:hidden;position:relative">
         <div style="width:${pctW}%;height:100%;background:${color};border-radius:3px"></div>
+        ${a.model ? `<span style="position:absolute;left:4px;top:1px;font-size:0.6rem;color:#fff;white-space:nowrap">${a.model}</span>` : ''}
       </div>
       <span style="min-width:60px;text-align:right;color:var(--text2)">${fmtM(total)}</span>
       <span style="min-width:30px;text-align:right;color:var(--text2)">${a.requests}r</span>
