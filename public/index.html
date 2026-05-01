@@ -22,6 +22,14 @@
   </div>
   <select id="report-select" class="report-select"></select>
   <select id="provider-select" class="report-select"></select>
+  <div id="cli-filter" class="cli-filter" style="display:none">
+    <button type="button" id="cli-filter-btn" class="cli-filter-btn" aria-haspopup="true" aria-expanded="false">
+      <span class="cli-filter-label">CLIs</span>
+      <span class="cli-filter-count" id="cli-filter-count"></span>
+      <span class="cli-filter-caret">▾</span>
+    </button>
+    <div class="cli-filter-menu" id="cli-filter-menu" role="menu"></div>
+  </div>
   <div class="export-dropdown">
     <button class="export-btn" onclick="document.querySelector('.export-menu').classList.toggle('open')">⬇ Export</button>
     <div class="export-menu">
@@ -32,6 +40,7 @@
   </div>
 </nav>
 <main id="app"></main>
+<footer id="sources-footer" class="sources-footer" style="display:none"></footer>
 <script src="/app.js"></script>
 </body>
 </html>

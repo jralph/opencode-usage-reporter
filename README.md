@@ -1,30 +1,49 @@
-# OpenCode Usage Reporter
+# Coding CLI Usage Reporter
 
-A Node.js CLI that reads your local [OpenCode](https://github.com/opencode-ai/opencode) session data and generates token usage reports broken down by provider, model, and tool. Includes an interactive HTML dashboard for exploring reports visually.
+A Node.js CLI that reads your local session data from multiple AI coding CLIs and generates a combined token usage report broken down by CLI tool, provider, model, and tool call. Includes an interactive HTML dashboard for exploring reports visually.
 
-Useful for understanding how many tokens you're consuming and comparing costs between GitHub Copilot subscriptions vs direct API usage.
+Useful for understanding how many tokens you're consuming across all your coding agents and comparing costs between providers.
+
+## Supported tools
+
+| Tool | Data location | Token counts |
+|------|---------------|--------------|
+| **OpenCode** | `~/.local/share/opencode/` (SQLite + JSON) | Real (API-reported) |
+| **Kiro CLI** | `~/.kiro/sessions/cli/` (JSON + JSONL) | Estimated locally |
+| **Kiro IDE** | `~/Library/Application Support/Kiro/User/globalStorage/kiro.kiroagent/` | Estimated locally |
+| **Claude Code** *(also covers Claude Desktop in Claude Code mode)* | `~/.claude/projects/{path}/{id}.jsonl` | Real, with estimation fallback for placeholder values |
+| **Codex** *(also covers OpenAI Codex desktop app)* | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` | Real (`turn_completed.usage`) |
+| **Cursor** | `~/Library/Application Support/Cursor/.../state.vscdb` | Real (per-bubble `tokenCount`) |
+| **GitHub Copilot CLI** | `~/.copilot/session-state/…/events.jsonl` (new) or `~/.copilot/history-session-state/*.json` (legacy) | Real in new format, estimated in legacy |
+| **VS Code Copilot Chat** | `~/Library/Application Support/Code{,\u00a0-\u00a0Insiders,VSCodium}/User/workspaceStorage/{hash}/chatSessions/` | Sometimes real, estimation fallback |
+
+**Not yet supported:** JetBrains Copilot (Nitrite binary DB, requires JVM to read), Claude Desktop regular chat (IndexedDB LevelDB blobs), `gh copilot` extension (stateless, no local data).
+
+Adapters auto-detect. Tools without local data are silently skipped.
+
+The output shape is formally described in [`schema.json`](./schema.json) (JSON Schema draft 2020-12).
 
 ## Requirements
 
 - Node.js 18+
-- `sqlite3` CLI (for reading newer OpenCode databases)
-- OpenCode installed with data in `~/.local/share/opencode/`
+- `sqlite3` CLI (for OpenCode and Cursor)
 
 ## Generating a Report
 
 No install required — run directly with npx:
 
 ```bash
-# Hourly breakdown for the last 7 days
+# Combined report across all detected tools, last 7 days
 npx jralph/opencode-usage-reporter --days 7
 
-# Summary only (totals + per-model + per-tool, no hourly rows)
-npx jralph/opencode-usage-reporter --days 7 --summary-only
+# Restrict to specific tools (comma-separated or repeatable)
+npx jralph/opencode-usage-reporter --tool opencode --days 30
+npx jralph/opencode-usage-reporter --tool kiro,kiro-ide --days 30
 
-# Save to file
-npx jralph/opencode-usage-reporter --days 7 --output report.json
+# List detected tools
+npx jralph/opencode-usage-reporter --list-tools
 
-# Session-level breakdown for the last 30 days
+# Session-level breakdown to file
 npx jralph/opencode-usage-reporter --days 30 --report sessions --output report.json
 ```
 
@@ -34,23 +53,54 @@ npx jralph/opencode-usage-reporter --days 30 --report sessions --output report.j
 |------|---------|-------------|
 | `--days <n>` | `7` | Number of days to include |
 | `--report <type>` | `hours` | Report type: `hours` or `sessions` |
+| `--format <name>` | `per-tool` | Output schema: `per-tool`, `combined`, or `legacy`. See *Output formats* below. |
+| `--tool <name[,name...]>` | all detected | Restrict to specific CLI tools. Values: `opencode`, `kiro`, `kiro-ide`, `claude-code`, `codex`, `cursor`, `copilot-cli`, `copilot-vscode`, `all` |
+| `--list-tools` | | Print detection status for each supported CLI and exit |
 | `--output <file>` | stdout | Write JSON to file instead of stdout |
 | `--summary-only` | | Only output totals, model breakdowns, and tool stats (no per-hour/session rows) |
 | `--use-real-session-name` | | Include actual session titles instead of anonymised IDs |
 | `--help` | | Show help |
 
-### Global Install
+### Output formats
 
-If you prefer, you can install globally:
+Three output shapes are supported. All three produce the same `totals`, `model_totals`, `tool_totals`, `warnings`, `sessions`, and `usage` sections — what changes is whether rows are split or merged across CLIs, and whether the new multi-tool top-level fields are emitted.
+
+| Format | Row keying | `cli_tool` on rows | `cli_tool_totals` / `sources.tools` | Existing dashboard |
+|---|---|---|---|---|
+| **`per-tool`** (default) | `(cli_tool, provider, model)` / `(cli_tool, tool)` | yes, everywhere | yes | renders, but shows per-CLI rows without collapsing |
+| **`combined`** | `(provider, model)` / `(tool)` | only on `sessions[]` / `usage[]` / `warnings[]` | yes | native — rows merge across CLIs |
+| **`legacy`** | `(provider, model)` / `(tool)` | never | no | byte-for-byte pre-multi-tool shape |
+
+The full JSON Schema (draft 2020-12) is in [`schema.json`](./schema.json).
+
+### Global Install
 
 ```bash
 npm install -g jralph/opencode-usage-reporter
-opencode-usage --days 7
+coding-usage --days 7
+# or: opencode-usage --days 7
 ```
 
 ## Dashboard
 
-Drop a report JSON into `reports/` and open `public/index.html` in a browser to explore it visually. The dashboard supports loading multiple report files and merging them.
+Two ways to explore reports visually:
+
+**Static (no install):** drop report JSON files into `reports/` and open `public/index.html` in a browser.
+
+**Server (recommended):** `report-analytics` serves the dashboard + report data over HTTP. Accepts either a directory of reports or a single report file:
+
+```bash
+# Directory of reports (merged in the UI)
+npx jralph/opencode-usage-reporter report-analytics --reports ./reports
+
+# Single report file
+npx jralph/opencode-usage-reporter report-analytics --report ./report.json
+
+# Custom port
+npx jralph/opencode-usage-reporter report-analytics --report ./report.json --port 4000
+```
+
+Note: the existing dashboard renders the `legacy` and `combined` format shapes out of the box. The default `per-tool` format is valid JSON and shows data in the dashboard but doesn't yet render per-CLI groupings — fine for direct JSON consumption, a future UI pass will surface the `cli_tool` splits.
 
 Pages:
 - **Dashboard** — summary cards, token usage over time, provider/model breakdowns
@@ -78,6 +128,11 @@ Aggregates token usage into hourly buckets per provider/model combination, with 
 ```json
 {
   "report_type": "hourly",
+  "sources": { "tools": { "opencode": 1842, "kiro": 1781, "kiro-ide": 78 } },
+  "cli_tool_totals": [
+    { "cli_tool": "opencode", "input_tokens": 201576698, "output_tokens": 914609, "tool_input_tokens": 5132699, "tool_output_tokens": 21034122, "human_input_tokens": 59045, "requests": 1842, "sessions": 47, "tool_calls": 2472 },
+    { "cli_tool": "kiro",     "input_tokens": 35092,     "output_tokens": 85575,  "tool_input_tokens": 187349,  "tool_output_tokens": 3431989,  "human_input_tokens": 35092, "requests": 1781, "sessions": 6,  "tool_calls": 1529 }
+  ],
   "period": {
     "start": "2026-03-10T16:00:00.000Z",
     "end": "2026-03-17T16:00:00.000Z",
@@ -202,11 +257,11 @@ The `tool_timeline` array powers the flame graph in the dashboard. Events includ
 
 ## How It Works
 
-OpenCode stores session and message data locally in `~/.local/share/opencode/`. Newer versions use a SQLite database (`opencode.db`), older versions use JSON files in `storage/`. This tool auto-detects and reads from both sources.
+Each supported CLI stores session data locally in its own format — SQLite for OpenCode and Cursor, JSONL/JSON for the others. A per-tool adapter in `adapters/` parses that tool's data and produces records in a shared internal shape. The orchestrator concatenates records from every detected (or explicitly-selected) adapter and runs the shared aggregation pipeline.
 
-Each message records the provider, model, token counts, and timestamps. For messages missing token counts (e.g. user messages), the tool estimates them using Anthropic's Claude tokenizer. Tool call inputs/outputs are also tokenized to give accurate `tool_input_tokens` counts.
+Where a tool doesn't persist real token counts (Kiro CLI, Kiro IDE) or writes placeholder values (some Claude Code assistant turns), text is tokenized locally using Anthropic's Claude tokenizer and flagged with `estimated: true`. This is a reasonable approximation across providers — Claude's BPE tokenizer correlates closely with OpenAI's `cl100k_base`.
 
-After aggregation, sessions are analysed for waste patterns and any issues are emitted as `warnings` in the report.
+After aggregation, sessions are analysed for waste patterns (inefficient reads, duplicate reads, unbounded bash, read-then-small-edit, superseded writes, excessive iteration, …) and any issues are emitted as `warnings` in the report. Tool dominance is scoped per-CLI so a hot tool in one CLI doesn't skew warnings for another.
 
 ## License
 

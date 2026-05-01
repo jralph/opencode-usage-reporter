@@ -1,0 +1,365 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jralph/opencode-usage-reporter/schema.json",
+  "title": "Coding CLI Usage Report",
+  "description": "JSON schema for reports produced by `report-opencode-usage.js` (binaries: `opencode-usage`, `coding-usage`). A report aggregates token/tool usage across one or more detected AI coding CLIs/IDEs.\n\nThe output shape depends on `--format <per-tool|combined|legacy>` (default: `per-tool`). All three share most of the structure; the differences are encoded as separate `*Report` branches under `oneOf`.\n\nFormat cheat-sheet:\n- **per-tool** (default): rows split per CLI everywhere. Every aggregation row carries `cli_tool`. Top-level `sources.tools` and `cli_tool_totals` emitted. Lossless multi-CLI fidelity.\n- **combined**: dashboard-native keying — rows merged across CLIs by `(provider, model)` for `model_totals` and by `tool` for `tool_totals`. `cli_tool_totals` and `sources.tools` still emitted at top level. `cli_tool` retained on `sessions[]`, `usage[]`, and `warnings[]` since those are already unique across CLIs.\n- **legacy**: byte-for-byte pre-multi-tool shape. No `cli_tool` fields anywhere, no `sources`, no `cli_tool_totals`. For strict back-compat with pre-refactor consumers.\n\nReport types: `--report hours` (default, hourly buckets) or `--report sessions` (per-session detail). `--summary-only` drops per-hour/session arrays.",
+  "oneOf": [
+    { "$ref": "#/$defs/PerToolReport" },
+    { "$ref": "#/$defs/CombinedReport" },
+    { "$ref": "#/$defs/LegacyReport" }
+  ],
+  "$defs": {
+    "PerToolReport": {
+      "title": "Per-tool report (--format per-tool, default)",
+      "description": "Rows split per CLI. Every `model_totals[]`, `tool_totals[]`, `sessions[]`, `usage[]`, and `warnings[]` entry carries `cli_tool`. `sources.tools` and `cli_tool_totals` emitted at top level.",
+      "type": "object",
+      "required": ["report_type", "period", "generated_at", "totals", "model_totals", "tool_totals", "warnings"],
+      "properties": {
+        "report_type":       { "enum": ["hourly", "sessions"] },
+        "period":            { "$ref": "#/$defs/Period" },
+        "sources":           { "$ref": "#/$defs/Sources" },
+        "generated_at":      { "type": "string", "format": "date-time" },
+        "totals":            { "$ref": "#/$defs/Totals" },
+        "cli_tool_totals":   { "type": "array", "items": { "$ref": "#/$defs/CliToolTotal" } },
+        "model_totals":      { "type": "array", "items": { "$ref": "#/$defs/ModelTotalPerTool" } },
+        "tool_totals":       { "type": "array", "items": { "$ref": "#/$defs/ToolTotalPerTool" } },
+        "warnings":          { "type": "array", "items": { "$ref": "#/$defs/WarningWithCliTool" } },
+        "file_stats":        { "type": ["array", "null"], "items": { "$ref": "#/$defs/FileStat" } },
+        "sessions":          { "type": "array", "items": { "$ref": "#/$defs/SessionWithCliTool" } },
+        "usage":             { "type": "array", "items": { "$ref": "#/$defs/HourBucketPerTool" }, "description": "Present only when report_type='hourly'. Absent when --summary-only is passed." }
+      }
+    },
+
+    "CombinedReport": {
+      "title": "Combined report (--format combined)",
+      "description": "Dashboard-native keying (rows merged across CLIs) plus additive multi-tool top-level fields. `model_totals` keyed by `(provider, model)`; `tool_totals` keyed by `tool`. `cli_tool` removed from those rows but retained on `sessions[]` / `usage[]` / `warnings[]`.",
+      "type": "object",
+      "required": ["report_type", "period", "generated_at", "totals", "model_totals", "tool_totals", "warnings"],
+      "properties": {
+        "report_type":       { "enum": ["hourly", "sessions"] },
+        "period":            { "$ref": "#/$defs/Period" },
+        "sources":           { "$ref": "#/$defs/Sources" },
+        "generated_at":      { "type": "string", "format": "date-time" },
+        "totals":            { "$ref": "#/$defs/Totals" },
+        "cli_tool_totals":   { "type": "array", "items": { "$ref": "#/$defs/CliToolTotal" } },
+        "model_totals":      { "type": "array", "items": { "$ref": "#/$defs/ModelTotalLegacy" } },
+        "tool_totals":       { "type": "array", "items": { "$ref": "#/$defs/ToolTotalLegacy" } },
+        "warnings":          { "type": "array", "items": { "$ref": "#/$defs/WarningWithCliTool" } },
+        "file_stats":        { "type": ["array", "null"], "items": { "$ref": "#/$defs/FileStat" } },
+        "sessions":          { "type": "array", "items": { "$ref": "#/$defs/SessionWithCliTool" } },
+        "usage":             { "type": "array", "items": { "$ref": "#/$defs/HourBucketCombined" }, "description": "Present only when report_type='hourly'." }
+      }
+    },
+
+    "LegacyReport": {
+      "title": "Legacy report (--format legacy)",
+      "description": "Pre-multi-tool shape. Every CLI appears merged into the existing keying; no `cli_tool` anywhere; no `sources` / `cli_tool_totals`. Use this for strict back-compat with consumers that pre-date multi-tool support.",
+      "type": "object",
+      "required": ["report_type", "period", "generated_at", "totals", "model_totals", "tool_totals", "warnings"],
+      "properties": {
+        "report_type":       { "enum": ["hourly", "sessions"] },
+        "period":            { "$ref": "#/$defs/Period" },
+        "generated_at":      { "type": "string", "format": "date-time" },
+        "totals":            { "$ref": "#/$defs/Totals" },
+        "model_totals":      { "type": "array", "items": { "$ref": "#/$defs/ModelTotalLegacy" } },
+        "tool_totals":       { "type": "array", "items": { "$ref": "#/$defs/ToolTotalLegacy" } },
+        "warnings":          { "type": "array", "items": { "$ref": "#/$defs/WarningLegacy" } },
+        "file_stats":        { "type": ["array", "null"], "items": { "$ref": "#/$defs/FileStat" } },
+        "sessions":          { "type": "array", "items": { "$ref": "#/$defs/SessionLegacy" } },
+        "usage":             { "type": "array", "items": { "$ref": "#/$defs/HourBucketLegacy" }, "description": "Present only when report_type='hourly'." }
+      }
+    },
+
+    "Period": {
+      "type": "object",
+      "required": ["start", "end", "days"],
+      "properties": {
+        "start": { "type": "string", "format": "date-time", "description": "Inclusive lower bound — `now - days * 86400000` as ISO 8601." },
+        "end":   { "type": "string", "format": "date-time", "description": "Report generation time as ISO 8601." },
+        "days":  { "type": "integer", "minimum": 1, "description": "Value passed via --days (default 7)." }
+      }
+    },
+
+    "Sources": {
+      "title": "sources (per-tool and combined formats only)",
+      "type": "object",
+      "description": "Per-adapter record counts describing what contributed to this report. Omitted in legacy format.",
+      "properties": {
+        "tools": {
+          "type": "object",
+          "description": "Map of adapter name to number of raw records it contributed before aggregation.",
+          "additionalProperties": { "type": "integer", "minimum": 0 },
+          "propertyNames": { "$ref": "#/$defs/CliToolName" }
+        }
+      }
+    },
+
+    "CliToolName": {
+      "title": "CLI tool identifier",
+      "type": "string",
+      "enum": [
+        "opencode",
+        "kiro",
+        "kiro-ide",
+        "claude-code",
+        "codex",
+        "cursor",
+        "copilot-cli",
+        "copilot-vscode"
+      ],
+      "description": "Adapter name. `codex` also covers the OpenAI Codex desktop app (shares `~/.codex/`). `claude-code` also covers Claude Desktop in Claude Code mode (shares `~/.claude/projects/`). `copilot-cli` handles both legacy `history-session-state/*.json` and new `session-state/{uuid}/events.jsonl` formats. JetBrains Copilot is not currently parseable (Nitrite binary DB)."
+    },
+
+    "Totals": {
+      "type": "object",
+      "description": "Global totals across every record in the report. Identical shape in all three formats.",
+      "required": ["input_tokens", "output_tokens", "estimated_tokens", "tool_input_tokens", "human_input_tokens", "requests"],
+      "properties": {
+        "input_tokens":      { "type": "integer", "description": "Sum of provider-reported + locally-tokenized input tokens." },
+        "output_tokens":     { "type": "integer" },
+        "estimated_tokens":  { "type": "integer", "description": "Portion of input+output tokens that came from the local tokenizer." },
+        "tool_input_tokens": { "type": "integer", "description": "Tokens from tool call inputs (always locally tokenized)." },
+        "human_input_tokens":{ "type": "integer", "description": "Input tokens from `role: 'user'` records only." },
+        "requests":          { "type": "integer" }
+      }
+    },
+
+    "CliToolTotal": {
+      "title": "cli_tool_totals[] (per-tool and combined formats)",
+      "type": "object",
+      "required": ["cli_tool", "input_tokens", "output_tokens", "requests", "sessions", "tool_calls"],
+      "properties": {
+        "cli_tool":           { "$ref": "#/$defs/CliToolName" },
+        "input_tokens":       { "type": "integer" },
+        "output_tokens":      { "type": "integer" },
+        "estimated_tokens":   { "type": "integer" },
+        "tool_input_tokens":  { "type": "integer" },
+        "tool_output_tokens": { "type": "integer" },
+        "human_input_tokens": { "type": "integer" },
+        "requests":           { "type": "integer" },
+        "sessions":           { "type": "integer", "description": "Distinct session count contributed by this CLI." },
+        "tool_calls":         { "type": "integer" }
+      }
+    },
+
+    "ModelTotalPerTool": {
+      "type": "object",
+      "description": "Per-tool format: keyed by (cli_tool, provider, model). Each CLI contributes its own row even for shared provider/model.",
+      "required": ["cli_tool", "provider", "model", "input_tokens", "output_tokens", "requests"],
+      "properties": {
+        "cli_tool":            { "$ref": "#/$defs/CliToolName" },
+        "provider":            { "type": "string" },
+        "model":               { "type": "string" },
+        "input_tokens":        { "type": "integer" },
+        "output_tokens":       { "type": "integer" },
+        "estimated_tokens":    { "type": "integer" },
+        "tool_input_tokens":   { "type": "integer" },
+        "human_input_tokens":  { "type": "integer" },
+        "requests":            { "type": "integer" }
+      }
+    },
+
+    "ModelTotalLegacy": {
+      "type": "object",
+      "description": "Combined + legacy formats: keyed by (provider, model). Rows from different CLIs sharing a provider/model are merged.",
+      "required": ["provider", "model", "input_tokens", "output_tokens", "requests"],
+      "properties": {
+        "provider":            { "type": "string" },
+        "model":               { "type": "string" },
+        "input_tokens":        { "type": "integer" },
+        "output_tokens":       { "type": "integer" },
+        "estimated_tokens":    { "type": "integer" },
+        "tool_input_tokens":   { "type": "integer" },
+        "human_input_tokens":  { "type": "integer" },
+        "requests":            { "type": "integer" }
+      }
+    },
+
+    "ToolTotalPerTool": {
+      "type": "object",
+      "required": ["cli_tool", "tool", "calls", "input_tokens", "output_tokens"],
+      "properties": {
+        "cli_tool":      { "$ref": "#/$defs/CliToolName" },
+        "tool":          { "type": "string" },
+        "calls":         { "type": "integer" },
+        "input_tokens":  { "type": "integer" },
+        "output_tokens": { "type": "integer" }
+      }
+    },
+
+    "ToolTotalLegacy": {
+      "type": "object",
+      "description": "Combined + legacy formats: keyed by tool name. Rows with the same tool name across CLIs are merged.",
+      "required": ["tool", "calls", "input_tokens", "output_tokens"],
+      "properties": {
+        "tool":          { "type": "string" },
+        "calls":         { "type": "integer" },
+        "input_tokens":  { "type": "integer" },
+        "output_tokens": { "type": "integer" }
+      }
+    },
+
+    "WarningBase": {
+      "type": "object",
+      "required": ["type", "severity", "detail"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "excessive_iteration", "wasted_compute", "low_token_efficiency", "output_heavy",
+            "long_running", "excessive_full_reads", "expensive_full_reads",
+            "inefficient_reads", "unbounded_bash", "read_then_small_edit",
+            "duplicate_reads", "superseded_writes", "errored_tool_inputs",
+            "tool_dominance", "expensive_tool"
+          ]
+        },
+        "severity":   { "type": "string", "enum": ["info", "warn", "severe"] },
+        "session_id": { "type": ["string", "null"], "description": "Absent for aggregate warnings (tool_dominance, expensive_tool)." },
+        "detail":     { "type": "string" }
+      }
+    },
+
+    "WarningWithCliTool": {
+      "allOf": [
+        { "$ref": "#/$defs/WarningBase" },
+        { "type": "object", "properties": { "cli_tool": { "$ref": "#/$defs/CliToolName" } } }
+      ]
+    },
+
+    "WarningLegacy": { "$ref": "#/$defs/WarningBase" },
+
+    "SessionBase": {
+      "type": "object",
+      "required": ["session_id", "session_title", "started_at", "ended_at", "provider", "model", "input_tokens", "output_tokens", "requests"],
+      "properties": {
+        "session_id":          { "type": "string" },
+        "session_title":       { "type": "string", "description": "First 8 chars of session_id unless --use-real-session-name is passed." },
+        "directory":           { "type": ["string", "null"], "description": "Absolute path of the working directory, when the adapter can determine it. `kiro-ide` emits a synthetic `kiro-ide:<hash>` path." },
+        "started_at":          { "type": "string", "format": "date-time" },
+        "ended_at":            { "type": "string", "format": "date-time" },
+        "provider":            { "type": "string" },
+        "model":               { "type": "string" },
+        "input_tokens":        { "type": "integer" },
+        "output_tokens":       { "type": "integer" },
+        "estimated_tokens":    { "type": "integer" },
+        "tool_input_tokens":   { "type": "integer" },
+        "tool_output_tokens":  { "type": "integer" },
+        "tool_calls":          { "type": "integer" },
+        "human_input_tokens":  { "type": "integer" },
+        "requests":            { "type": "integer" },
+        "agents": {
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "requests":      { "type": "integer" },
+              "input_tokens":  { "type": "integer" },
+              "output_tokens": { "type": "integer" },
+              "model":         { "type": "string" }
+            }
+          }
+        },
+        "tool_timeline": { "type": ["array", "null"], "items": { "$ref": "#/$defs/TimelineEvent" } },
+        "file_changes":  { "$ref": "#/$defs/FileChanges" },
+        "files":         { "type": ["array", "null"], "items": { "$ref": "#/$defs/SessionFile" } }
+      }
+    },
+
+    "SessionWithCliTool": {
+      "allOf": [
+        { "$ref": "#/$defs/SessionBase" },
+        { "type": "object", "properties": { "cli_tool": { "$ref": "#/$defs/CliToolName" } } }
+      ]
+    },
+
+    "SessionLegacy": { "$ref": "#/$defs/SessionBase" },
+
+    "TimelineEvent": {
+      "type": "object",
+      "required": ["tool", "start", "end"],
+      "properties": {
+        "tool":   { "type": "string" },
+        "start":  { "type": "integer", "description": "Unix ms." },
+        "end":    { "type": "integer" },
+        "tokens": { "type": "integer" },
+        "depth":  { "type": "integer", "minimum": 0, "description": "Nesting for flame graph. OpenCode task children increment depth; other adapters always emit 0." },
+        "title":  { "type": "string" }
+      }
+    },
+
+    "FileChanges": {
+      "type": ["object", "null"],
+      "properties": {
+        "reads":            { "type": "integer" },
+        "edits":            { "type": "integer" },
+        "writes":           { "type": "integer" },
+        "unique_files":     { "type": "integer" },
+        "additions":        { "type": "integer" },
+        "deletions":        { "type": "integer" },
+        "full_reads":       { "type": "integer", "description": "Reads without offset/limit — likely reading the whole file." },
+        "full_read_tokens": { "type": "integer" }
+      }
+    },
+
+    "SessionFile": {
+      "type": "object",
+      "required": ["path", "calls", "input_tokens"],
+      "properties": {
+        "path":          { "type": "string" },
+        "calls":         { "type": "integer" },
+        "input_tokens":  { "type": "integer" },
+        "tools":         { "type": "object", "additionalProperties": { "type": "integer" } }
+      }
+    },
+
+    "FileStat": {
+      "type": "object",
+      "description": "Global per-file summary. Present only with --use-real-session-name.",
+      "required": ["path", "calls", "input_tokens", "sessions"],
+      "properties": {
+        "path":         { "type": "string" },
+        "calls":        { "type": "integer" },
+        "input_tokens": { "type": "integer" },
+        "sessions":     { "type": "integer" },
+        "directory":    { "type": ["string", "null"] },
+        "tools":        { "type": "object", "additionalProperties": { "type": "integer" } }
+      }
+    },
+
+    "HourBucketBase": {
+      "type": "object",
+      "required": ["hour", "provider", "model", "input_tokens", "output_tokens", "requests"],
+      "properties": {
+        "hour":               { "type": "string", "description": "ISO 8601 UTC hour, e.g. `2026-05-01T14:00:00Z`." },
+        "provider":           { "type": "string" },
+        "model":              { "type": "string" },
+        "input_tokens":       { "type": "integer" },
+        "output_tokens":      { "type": "integer" },
+        "estimated_tokens":   { "type": "integer" },
+        "tool_input_tokens":  { "type": "integer" },
+        "human_input_tokens": { "type": "integer" },
+        "requests":           { "type": "integer" },
+        "tools": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "calls":        { "type": "integer" },
+              "input_tokens": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+
+    "HourBucketPerTool": {
+      "allOf": [
+        { "$ref": "#/$defs/HourBucketBase" },
+        { "type": "object", "properties": { "cli_tool": { "$ref": "#/$defs/CliToolName" } }, "required": ["cli_tool"] }
+      ]
+    },
+
+    "HourBucketCombined": { "$ref": "#/$defs/HourBucketBase" },
+    "HourBucketLegacy":   { "$ref": "#/$defs/HourBucketBase" }
+  }
+}

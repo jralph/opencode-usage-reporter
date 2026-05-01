@@ -19,37 +19,69 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const opts = { port: 3000, reports: null };
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--reports' && args[i + 1]) opts.reports = args[++i];
+    // --reports accepts either a directory (load all *.json inside) or a
+    // single .json file (load just that one report).
+    // --report is accepted as an alias for the single-file case.
+    if ((args[i] === '--reports' || args[i] === '--report') && args[i + 1]) opts.reports = args[++i];
     else if (args[i] === '--port' && args[i + 1]) opts.port = parseInt(args[++i], 10);
     else if (args[i] === '--help' || args[i] === '-h') {
-      console.log(`Usage: report-analytics serve --reports <dir> [--port <n>]
+      console.log(`Usage: report-analytics serve --reports <path> [--port <n>]
 
 Options:
-  --reports <dir>  Directory containing report JSON files (required)
-  --port <n>       Port to listen on (default: 3000)
-  --help           Show this help`);
+  --reports <path>  Directory of report JSON files, or a single report.json file
+  --report  <file>  Alias for passing a single report file
+  --port <n>        Port to listen on (default: 3000)
+  --help            Show this help
+
+Examples:
+  report-analytics serve --reports ./reports
+  report-analytics serve --reports ./report.json
+  report-analytics serve --report ./report.json --port 4000`);
       process.exit(0);
     }
   }
-  // strip "serve" subcommand if present
   if (!opts.reports) {
-    console.error('Error: --reports <dir> is required');
+    console.error('Error: --reports <path> is required (directory or single JSON file)');
     process.exit(1);
   }
   return opts;
 }
 
-function loadReports(dir) {
-  const absDir = path.resolve(dir);
-  if (!fs.existsSync(absDir)) {
-    console.error(`Error: reports directory not found: ${absDir}`);
+function loadReports(reportsPath) {
+  const absPath = path.resolve(reportsPath);
+  if (!fs.existsSync(absPath)) {
+    console.error(`Error: reports path not found: ${absPath}`);
     process.exit(1);
   }
-  const files = fs.readdirSync(absDir).filter(f => f.endsWith('.json'));
+  const stat = fs.statSync(absPath);
+  let files;
+  let baseDir;
+  if (stat.isFile()) {
+    if (!absPath.endsWith('.json')) {
+      console.error(`Error: expected a .json file or a directory, got: ${absPath}`);
+      process.exit(1);
+    }
+    baseDir = path.dirname(absPath);
+    files = [path.basename(absPath)];
+  } else if (stat.isDirectory()) {
+    baseDir = absPath;
+    files = fs.readdirSync(absPath).filter(f => f.endsWith('.json'));
+    if (files.length === 0) {
+      console.error(`Warning: no .json files found in ${absPath}`);
+    }
+  } else {
+    console.error(`Error: reports path is neither a file nor a directory: ${absPath}`);
+    process.exit(1);
+  }
   return files.map(f => {
-    const data = JSON.parse(fs.readFileSync(path.join(absDir, f), 'utf8'));
-    return { filename: f, data };
-  });
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(baseDir, f), 'utf8'));
+      return { filename: f, data };
+    } catch (err) {
+      console.error(`Warning: failed to parse ${f}: ${err.message}`);
+      return null;
+    }
+  }).filter(Boolean);
 }
 
 function serveStatic(res, urlPath) {
@@ -73,6 +105,21 @@ let pricingCache = null;
 let pricingFetchedAt = 0;
 const PRICING_TTL = 3600000; // 1 hour
 
+// Canonical provider priority: when multiple OpenRouter entries share a
+// short model name (e.g. `claude-opus-4.7` appears under `anthropic/` and
+// some hypothetical `github-copilot/` mirror), prefer the provider listed
+// first here. These are the providers that actually publish first-party
+// pricing and cache rates.
+const CANONICAL_PROVIDERS = ['anthropic', 'openai', 'google', 'x-ai', 'meta', 'mistralai', 'qwen', 'deepseek'];
+
+function providerRank(id) {
+  const slash = id.indexOf('/');
+  if (slash < 0) return Number.MAX_SAFE_INTEGER;
+  const provider = id.slice(0, slash);
+  const idx = CANONICAL_PROVIDERS.indexOf(provider);
+  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+}
+
 function fetchOpenRouterPricing() {
   return new Promise((resolve, reject) => {
     if (pricingCache && Date.now() - pricingFetchedAt < PRICING_TTL) return resolve(pricingCache);
@@ -82,13 +129,45 @@ function fetchOpenRouterPricing() {
       res.on('end', () => {
         try {
           const models = JSON.parse(body).data || [];
-          pricingCache = models.reduce((acc, m) => {
-            const p = m.pricing;
-            if (p && (p.prompt !== '0' || p.completion !== '0')) {
-              acc[m.id] = { prompt: parseFloat(p.prompt) * 1e6, completion: parseFloat(p.completion) * 1e6 };
+          // First pass: build the full id → pricing map (prompt, completion,
+          // and cache rates when provided).
+          //
+          // OpenRouter publishes prices per-token in USD; multiply by 1e6
+          // so the dashboard can compute `tokens/1e6 * rate`. `input_cache_read`
+          // and `input_cache_write` are provider-native (e.g. Anthropic's 0.1×
+          // / 1.25× multipliers for 5m TTL are already baked in).
+          const byId = {};
+          for (const m of models) {
+            const p = m.pricing || {};
+            if (p.prompt === '0' && p.completion === '0') continue;
+            const entry = {
+              prompt: parseFloat(p.prompt || 0) * 1e6,
+              completion: parseFloat(p.completion || 0) * 1e6,
+            };
+            if (p.input_cache_read) entry.cache_read = parseFloat(p.input_cache_read) * 1e6;
+            if (p.input_cache_write) entry.cache_creation = parseFloat(p.input_cache_write) * 1e6;
+            byId[m.id] = entry;
+          }
+
+          // Second pass: add aliases keyed by the short model name alone so
+          // that model identifiers routed through other providers (e.g.
+          // `github-copilot/claude-opus-4.7`) still resolve. If two OpenRouter
+          // entries share a short name, we keep the one from the most
+          // canonical provider.
+          const shortNameRanks = new Map();
+          for (const id of Object.keys(byId)) {
+            const slash = id.indexOf('/');
+            if (slash < 0) continue;
+            const short = id.slice(slash + 1);
+            const rank = providerRank(id);
+            const existingRank = shortNameRanks.get(short);
+            if (existingRank === undefined || rank < existingRank) {
+              shortNameRanks.set(short, rank);
+              byId[short] = byId[id];
             }
-            return acc;
-          }, {});
+          }
+
+          pricingCache = byId;
           pricingFetchedAt = Date.now();
           resolve(pricingCache);
         } catch (e) { reject(e); }
