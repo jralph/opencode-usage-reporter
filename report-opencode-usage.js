@@ -47,19 +47,36 @@ Options:
 const hasDB = fs.existsSync(DB_PATH);
 const hasFiles = fs.existsSync(SESSION_DIR);
 
+// Large SQLite result sets (tool parts over a month can exceed 400 MB) would overflow
+// execSync's default maxBuffer and be silently swallowed, producing reports with zero
+// tool calls. Stream output to a temp file instead so size is unbounded.
 function dbQueryRaw(sql) {
   if (!hasDB) return '';
+  const tmp = path.join(require('os').tmpdir(), `opencode-usage-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.out`);
   try {
-    return execSync(`sqlite3 "${DB_PATH}" ${JSON.stringify(sql)}`, { maxBuffer: 200 * 1024 * 1024 }).toString();
-  } catch { return ''; }
+    execSync(`sqlite3 "${DB_PATH}" ${JSON.stringify(sql)} > "${tmp}"`, { stdio: ['ignore', 'ignore', 'inherit'] });
+    return fs.readFileSync(tmp, 'utf8');
+  } catch (err) {
+    console.error(`sqlite3 query failed: ${err.message}`);
+    return '';
+  } finally {
+    try { fs.unlinkSync(tmp); } catch {}
+  }
 }
 
 function dbQueryJSON(sql) {
   if (!hasDB) return [];
+  const tmp = path.join(require('os').tmpdir(), `opencode-usage-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
   try {
-    const out = execSync(`sqlite3 -json "${DB_PATH}" ${JSON.stringify(sql)}`, { maxBuffer: 100 * 1024 * 1024 });
-    return JSON.parse(out.toString() || '[]');
-  } catch { return []; }
+    execSync(`sqlite3 -json "${DB_PATH}" ${JSON.stringify(sql)} > "${tmp}"`, { stdio: ['ignore', 'ignore', 'inherit'] });
+    const out = fs.readFileSync(tmp, 'utf8');
+    return JSON.parse(out || '[]');
+  } catch (err) {
+    console.error(`sqlite3 query failed: ${err.message}`);
+    return [];
+  } finally {
+    try { fs.unlinkSync(tmp); } catch {}
+  }
 }
 
 function readJSON(fp) {
