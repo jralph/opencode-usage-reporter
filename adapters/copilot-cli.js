@@ -25,35 +25,45 @@
 const fs = require('fs');
 const path = require('path');
 const { tokenizeAll } = require('../lib/tokenize');
-const { safeStringify, readJSON, readJSONL, listDir, makeRecord } = require('../lib/util');
+const { safeStringify, readJSON, readJSONL, listDir, homeCandidates, makeRecord } = require('../lib/util');
 
-const COPILOT_DIR = path.join(process.env.HOME, '.copilot');
-const LEGACY_DIR = path.join(COPILOT_DIR, 'history-session-state');
-const NEW_DIR = path.join(COPILOT_DIR, 'session-state');
-const CONFIG_PATH = path.join(COPILOT_DIR, 'config.json');
 const TOOL_NAME = 'copilot-cli';
+const MAX_CONTEXT_TOKENS = 200_000;
 
 function isAvailable() {
-  return fs.existsSync(LEGACY_DIR) || fs.existsSync(NEW_DIR);
+  return candidateCopilotDirs().some(dir =>
+    fs.existsSync(path.join(dir, 'history-session-state')) ||
+    fs.existsSync(path.join(dir, 'session-state'))
+  );
+}
+
+function candidateCopilotDirs() {
+  return homeCandidates().map(home => path.join(home, '.copilot'));
 }
 
 function readDefaultModel() {
-  const cfg = readJSON(CONFIG_PATH);
-  return cfg?.model || 'unknown';
+  for (const dir of candidateCopilotDirs()) {
+    const cfg = readJSON(path.join(dir, 'config.json'));
+    if (cfg?.model) return cfg.model;
+  }
+  return 'unknown';
 }
 
 // --- Legacy format ---
 
 function listLegacySessionFiles(cutoff) {
   const files = [];
-  for (const name of listDir(LEGACY_DIR)) {
-    if (!name.startsWith('session_') || !name.endsWith('.json')) continue;
-    const fp = path.join(LEGACY_DIR, name);
-    try {
-      const stat = fs.statSync(fp);
-      if (stat.mtimeMs < cutoff) continue;
-      files.push(fp);
-    } catch {}
+  for (const copilotDir of candidateCopilotDirs()) {
+    const legacyDir = path.join(copilotDir, 'history-session-state');
+    for (const name of listDir(legacyDir)) {
+      if (!name.startsWith('session_') || !name.endsWith('.json')) continue;
+      const fp = path.join(legacyDir, name);
+      try {
+        const stat = fs.statSync(fp);
+        if (stat.mtimeMs < cutoff) continue;
+        files.push(fp);
+      } catch {}
+    }
   }
   return files;
 }
@@ -140,16 +150,19 @@ function parseLegacySession(filePath, defaultModel, workItems, rawMessages, tool
 
 function listNewSessionDirs(cutoff) {
   const dirs = [];
-  if (!fs.existsSync(NEW_DIR)) return dirs;
-  for (const name of listDir(NEW_DIR)) {
-    const dir = path.join(NEW_DIR, name);
-    const eventsFile = path.join(dir, 'events.jsonl');
-    try {
-      if (!fs.statSync(eventsFile).isFile()) continue;
-      const stat = fs.statSync(eventsFile);
-      if (stat.mtimeMs < cutoff) continue;
-      dirs.push({ sessionId: name, eventsFile });
-    } catch {}
+  for (const copilotDir of candidateCopilotDirs()) {
+    const newDir = path.join(copilotDir, 'session-state');
+    if (!fs.existsSync(newDir)) continue;
+    for (const name of listDir(newDir)) {
+      const dir = path.join(newDir, name);
+      const eventsFile = path.join(dir, 'events.jsonl');
+      try {
+        if (!fs.statSync(eventsFile).isFile()) continue;
+        const stat = fs.statSync(eventsFile);
+        if (stat.mtimeMs < cutoff) continue;
+        dirs.push({ sessionId: name, eventsFile });
+      } catch {}
+    }
   }
   return dirs;
 }
@@ -278,6 +291,7 @@ function collect({ cutoff, useRealSessionName }) {
   }
 
   const records = [];
+  const runningContextBySession = new Map();
   for (const m of rawMessages) {
     const { msgId, sessionId, ts, role, model } = m;
     let inputTokens = 0;
@@ -285,6 +299,9 @@ function collect({ cutoff, useRealSessionName }) {
     let cacheReadTokens = 0;
     let cacheCreationTokens = 0;
     let estimated = m.estimated;
+    const textKey = msgId.startsWith('cp-leg:') ? `cp-leg-text:${msgId}` : `cp-new-text:${msgId}`;
+    const textToks = tokenMap.get(textKey) || 0;
+    const humanInputTokens = role === 'user' ? textToks : 0;
 
     if (!estimated && (m.realInputTokens || m.realOutputTokens || m.realCacheReadTokens || m.realCacheCreationTokens)) {
       inputTokens = m.realInputTokens;
@@ -292,10 +309,10 @@ function collect({ cutoff, useRealSessionName }) {
       cacheReadTokens = m.realCacheReadTokens || 0;
       cacheCreationTokens = m.realCacheCreationTokens || 0;
     } else {
-      const textKey = msgId.startsWith('cp-leg:') ? `cp-leg-text:${msgId}` : `cp-new-text:${msgId}`;
-      const textToks = tokenMap.get(textKey) || 0;
-      if (role === 'user') inputTokens = textToks;
-      else outputTokens = textToks;
+      if (role === 'assistant') {
+        inputTokens = Math.min(runningContextBySession.get(sessionId) || 0, MAX_CONTEXT_TOKENS);
+        outputTokens = textToks;
+      }
     }
 
     // Build tools and toolEvents from attached refs.
@@ -318,7 +335,13 @@ function collect({ cutoff, useRealSessionName }) {
       });
     }
 
-    if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0 && cacheCreationTokens === 0 && tools.length === 0) continue;
+    const contextGrowth = textToks
+      + tools.reduce((sum, t) => sum + (t.inputTokens || 0) + (t.outputTokens || 0), 0);
+    if (contextGrowth > 0) {
+      runningContextBySession.set(sessionId, (runningContextBySession.get(sessionId) || 0) + contextGrowth);
+    }
+
+    if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0 && cacheCreationTokens === 0 && humanInputTokens === 0 && tools.length === 0) continue;
 
     records.push(makeRecord({
       tool: TOOL_NAME,
@@ -338,7 +361,7 @@ function collect({ cutoff, useRealSessionName }) {
       outputTokens,
       cacheReadTokens,
       cacheCreationTokens,
-      humanInputTokens: role === 'user' ? inputTokens : 0,
+      humanInputTokens,
       estimated,
       tools,
       toolEvents,

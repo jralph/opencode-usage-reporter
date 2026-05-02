@@ -29,9 +29,8 @@
 const fs = require('fs');
 const path = require('path');
 const { tokenizeAll } = require('../lib/tokenize');
-const { safeStringify, readJSON, readJSONL, listDir, makeRecord } = require('../lib/util');
+const { safeStringify, readJSON, readJSONL, listDir, homeCandidates, makeRecord } = require('../lib/util');
 
-const KIRO_DIR = path.join(process.env.HOME, '.kiro/sessions/cli');
 const TOOL_NAME = 'kiro';
 
 // Hard ceiling on per-call input tokens. Kiro (via Bedrock/Claude) has a
@@ -62,7 +61,23 @@ function normalizeKiroModel(raw) {
 }
 
 function isAvailable() {
-  return fs.existsSync(KIRO_DIR);
+  return !!findKiroSessionDir() || !!findKiroHistoryFile();
+}
+
+function findKiroSessionDir() {
+  for (const home of homeCandidates()) {
+    const dir = path.join(home, '.kiro/sessions/cli');
+    if (fs.existsSync(dir)) return dir;
+  }
+  return null;
+}
+
+function findKiroHistoryFile() {
+  for (const home of homeCandidates()) {
+    const fp = path.join(home, '.kiro/.cli_bash_history');
+    if (fs.existsSync(fp)) return fp;
+  }
+  return null;
 }
 
 function collectText(content) {
@@ -113,8 +128,8 @@ function loadSession(jsonPath, jsonlPath) {
   return { meta, events };
 }
 
-function listSessions() {
-  const entries = listDir(KIRO_DIR);
+function listSessions(kiroDir) {
+  const entries = listDir(kiroDir);
   const sessions = [];
   const seen = new Set();
   for (const entry of entries) {
@@ -123,8 +138,8 @@ function listSessions() {
     const id = m[1];
     if (seen.has(id)) continue;
     seen.add(id);
-    const jsonPath = path.join(KIRO_DIR, `${id}.json`);
-    const jsonlPath = path.join(KIRO_DIR, `${id}.jsonl`);
+    const jsonPath = path.join(kiroDir, `${id}.json`);
+    const jsonlPath = path.join(kiroDir, `${id}.jsonl`);
     if (fs.existsSync(jsonPath) && fs.existsSync(jsonlPath)) {
       sessions.push({ id, jsonPath, jsonlPath });
     }
@@ -132,11 +147,66 @@ function listSessions() {
   return sessions;
 }
 
+function decodeHistoryLine(line) {
+  return line
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .trim();
+}
+
+function collectHistoryFallback(historyFile, cutoff, useRealSessionName) {
+  let stat;
+  try { stat = fs.statSync(historyFile); } catch { return []; }
+  if (stat.mtimeMs < cutoff) return [];
+
+  const raw = fs.readFileSync(historyFile, 'utf8');
+  const prompts = raw.split('\n')
+    .filter(line => line.trim() && line.trim() !== '#V2')
+    .map(decodeHistoryLine)
+    .filter(Boolean);
+  if (prompts.length === 0) return [];
+
+  const sessionId = `kiro-history-${Math.round(stat.mtimeMs)}`;
+  const sessionTitle = useRealSessionName
+    ? prompts[0].slice(0, 60)
+    : sessionId.slice(0, 8);
+  const workItems = prompts.map((text, i) => ({ id: `kiro-history:${i}`, texts: [text] }));
+
+  console.error(`[kiro] prompt history fallback, tokenizing ${workItems.length} items...`);
+  const tokenMap = tokenizeAll(workItems);
+
+  return prompts.map((_, i) => {
+    const tok = tokenMap.get(`kiro-history:${i}`) || 0;
+    return makeRecord({
+      tool: TOOL_NAME,
+      sessionId,
+      sessionTitle,
+      directory: null,
+      created: stat.mtimeMs,
+      completed: stat.mtimeMs,
+      role: 'user',
+      agent: null,
+      provider: 'aws-bedrock',
+      model: 'kiro-default',
+      inputTokens: 0,
+      outputTokens: 0,
+      humanInputTokens: tok,
+      estimated: true,
+      tools: [],
+      toolEvents: [],
+    });
+  }).filter(r => r.humanInputTokens > 0);
+}
+
 function collect({ cutoff, useRealSessionName }) {
   if (!isAvailable()) return [];
 
-  const sessionRefs = listSessions();
-  if (sessionRefs.length === 0) return [];
+  const kiroDir = findKiroSessionDir();
+  const historyFile = findKiroHistoryFile();
+  const sessionRefs = kiroDir ? listSessions(kiroDir) : [];
+  if (sessionRefs.length === 0) {
+    return historyFile ? collectHistoryFallback(historyFile, cutoff, useRealSessionName) : [];
+  }
 
   // Pass 1: parse sessions, build tokenization work, keep enough structure
   // to walk events in order for the billing-cost walk.
@@ -243,7 +313,9 @@ function collect({ cutoff, useRealSessionName }) {
     if (steps.length) sessionsData.push({ sessionMeta, steps });
   }
 
-  if (sessionsData.length === 0) return [];
+  if (sessionsData.length === 0) {
+    return historyFile ? collectHistoryFallback(historyFile, cutoff, useRealSessionName) : [];
+  }
 
   console.error(`[kiro] ${sessionsData.length} sessions, tokenizing ${workItems.length} items...`);
 

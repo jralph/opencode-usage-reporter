@@ -24,6 +24,8 @@ const CLI_COLORS = {
   'kiro-ide':        '#81ecec',
   'claude-code':     '#e17055',
   'codex':           '#55efc4',
+  'codex-app':       '#55efc4',
+  'codex-cli':       '#00b894',
   'cursor':          '#fd79a8',
   'copilot-cli':     '#fdcb6e',
   'copilot-vscode':  '#74b9ff',
@@ -432,11 +434,11 @@ function findPricing(model) {
 // publish `input_cache_read` / `input_cache_write`. Applied as ratios of the
 // base `prompt` price. Matches published provider pricing:
 //   • Anthropic (Claude): read 0.1×, creation 1.25× (5m TTL)
-//   • OpenAI:             cached input ~0.5× (GPT-5 family)
+//   • OpenAI:             cached input ~0.1× (GPT-5 family)
 //   • Google (Gemini):    cached input ~0.25×
 function cacheFallbackMultipliers(model) {
   const m = (model || '').toLowerCase();
-  if (m.includes('gpt') || m.includes('o1') || m.includes('o3')) return { read: 0.5, creation: 1.0 };
+  if (m.includes('gpt') || m.includes('o1') || m.includes('o3')) return { read: 0.1, creation: 1.0 };
   if (m.includes('gemini')) return { read: 0.25, creation: 1.0 };
   return { read: 0.1, creation: 1.25 }; // Anthropic default
 }

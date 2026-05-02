@@ -103,11 +103,13 @@
         "kiro-ide",
         "claude-code",
         "codex",
+        "codex-app",
+        "codex-cli",
         "cursor",
         "copilot-cli",
         "copilot-vscode"
       ],
-      "description": "Adapter name. `codex` also covers the OpenAI Codex desktop app (shares `~/.codex/`). `claude-code` also covers Claude Desktop in Claude Code mode (shares `~/.claude/projects/`). `copilot-cli` handles both legacy `history-session-state/*.json` and new `session-state/{uuid}/events.jsonl` formats. JetBrains Copilot is not currently parseable (Nitrite binary DB)."
+      "description": "Source CLI/tool identifier. `codex-app` and `codex-cli` are emitted by the `codex` adapter, which reads the shared `~/.codex/` session store. `claude-code` also covers Claude Desktop in Claude Code mode (shares `~/.claude/projects/`). `copilot-cli` handles both legacy `history-session-state/*.json` and new `session-state/{uuid}/events.jsonl` formats. JetBrains Copilot is not currently parseable (Nitrite binary DB)."
     },
 
     "Totals": {
@@ -115,12 +117,12 @@
       "description": "Global totals across every record in the report. Identical shape in all three formats.",
       "required": ["input_tokens", "output_tokens", "estimated_tokens", "tool_input_tokens", "human_input_tokens", "requests"],
       "properties": {
-        "input_tokens":      { "type": "integer", "description": "Sum of provider-reported + locally-tokenized input tokens." },
+        "input_tokens":      { "type": "integer", "description": "Billable model input tokens from provider usage or a context estimate. User-authored text is tracked separately in human_input_tokens unless provider usage reports it as part of an API call." },
         "output_tokens":     { "type": "integer" },
-        "estimated_tokens":  { "type": "integer", "description": "Portion of input+output tokens that came from the local tokenizer." },
+        "estimated_tokens":  { "type": "integer", "description": "Portion of billable input+output tokens that came from the local tokenizer." },
         "tool_input_tokens": { "type": "integer", "description": "Tokens from tool call inputs (always locally tokenized)." },
-        "human_input_tokens":{ "type": "integer", "description": "Input tokens from `role: 'user'` records only." },
-        "requests":          { "type": "integer" }
+        "human_input_tokens":{ "type": "integer", "description": "Tokenizer-estimated user-authored prompt tokens. This is a side metric and is not included in billable input by itself." },
+        "requests":          { "type": "integer", "description": "Count of API-call-like records with billable tokens or tool activity." }
       }
     },
 
@@ -136,7 +138,7 @@
         "tool_input_tokens":  { "type": "integer" },
         "tool_output_tokens": { "type": "integer" },
         "human_input_tokens": { "type": "integer" },
-        "requests":           { "type": "integer" },
+        "requests":           { "type": "integer", "description": "Count of API-call-like records with billable tokens or tool activity." },
         "sessions":           { "type": "integer", "description": "Distinct session count contributed by this CLI." },
         "tool_calls":         { "type": "integer" }
       }
@@ -155,7 +157,7 @@
         "estimated_tokens":    { "type": "integer" },
         "tool_input_tokens":   { "type": "integer" },
         "human_input_tokens":  { "type": "integer" },
-        "requests":            { "type": "integer" }
+        "requests":            { "type": "integer", "description": "Count of API-call-like records with billable tokens or tool activity." }
       }
     },
 
@@ -171,7 +173,7 @@
         "estimated_tokens":    { "type": "integer" },
         "tool_input_tokens":   { "type": "integer" },
         "human_input_tokens":  { "type": "integer" },
-        "requests":            { "type": "integer" }
+        "requests":            { "type": "integer", "description": "Count of API-call-like records with billable tokens or tool activity." }
       }
     },
 
@@ -246,13 +248,13 @@
         "tool_output_tokens":  { "type": "integer" },
         "tool_calls":          { "type": "integer" },
         "human_input_tokens":  { "type": "integer" },
-        "requests":            { "type": "integer" },
+        "requests":            { "type": "integer", "description": "Count of API-call-like records with billable tokens or tool activity." },
         "agents": {
           "type": ["object", "null"],
           "additionalProperties": {
             "type": "object",
             "properties": {
-              "requests":      { "type": "integer" },
+              "requests":      { "type": "integer", "description": "Count of API-call-like records with billable tokens or tool activity." },
               "input_tokens":  { "type": "integer" },
               "output_tokens": { "type": "integer" },
               "model":         { "type": "string" }
@@ -338,7 +340,7 @@
         "estimated_tokens":   { "type": "integer" },
         "tool_input_tokens":  { "type": "integer" },
         "human_input_tokens": { "type": "integer" },
-        "requests":           { "type": "integer" },
+        "requests":           { "type": "integer", "description": "Count of API-call-like records with billable tokens or tool activity." },
         "tools": {
           "type": "object",
           "additionalProperties": {

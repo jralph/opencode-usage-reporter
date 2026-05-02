@@ -226,12 +226,11 @@ function collect({ cutoff, useRealSessionName }) {
       const rawInput = tc.inputTokens || 0;
       const rawOutput = tc.outputTokens || 0;
 
-      const needsEstimate =
-        bubble.type === 1
-          ? rawInput === 0
-          : rawInput === 0 && rawOutput === 0;
+      const isUser = bubble.type === 1;
+      const isAssistant = bubble.type === 2;
+      const needsEstimate = isAssistant && rawInput === 0 && rawOutput === 0;
 
-      if (needsEstimate && bubble.text) {
+      if ((isUser || needsEstimate) && bubble.text) {
         workItems.push({ id: `cursor-text:${bubbleRef}`, texts: [bubble.text] });
       }
 
@@ -269,13 +268,14 @@ function collect({ cutoff, useRealSessionName }) {
 
     const role = isUser ? 'user' : 'assistant';
 
-    let inputTokens = tc.inputTokens || 0;
+    let inputTokens = isAssistant ? (tc.inputTokens || 0) : 0;
     let outputTokens = isAssistant ? (tc.outputTokens || 0) : 0;
+    let humanInputTokens = 0;
     let estimated = false;
 
-    if (isUser && inputTokens === 0) {
-      inputTokens = tokenMap.get(`cursor-text:${bubbleRef}`) || 0;
-      if (inputTokens > 0) estimated = true;
+    if (isUser) {
+      humanInputTokens = tokenMap.get(`cursor-text:${bubbleRef}`) || 0;
+      if (humanInputTokens > 0) estimated = true;
     } else if (isAssistant && inputTokens === 0 && outputTokens === 0) {
       const est = tokenMap.get(`cursor-text:${bubbleRef}`) || 0;
       if (est > 0) {
@@ -312,7 +312,7 @@ function collect({ cutoff, useRealSessionName }) {
       }
     }
 
-    if (inputTokens === 0 && outputTokens === 0 && tools.length === 0) continue;
+    if (inputTokens === 0 && outputTokens === 0 && humanInputTokens === 0 && tools.length === 0) continue;
 
     const createdTs = bubble.createdAt
       ? (typeof bubble.createdAt === 'number' ? bubble.createdAt : Date.parse(bubble.createdAt) || composer.lastUpdatedAt)
@@ -333,7 +333,7 @@ function collect({ cutoff, useRealSessionName }) {
       model: bubble.modelName || bubble.model || 'cursor-default',
       inputTokens,
       outputTokens,
-      humanInputTokens: role === 'user' ? inputTokens : 0,
+      humanInputTokens,
       estimated,
       tools,
       toolEvents,

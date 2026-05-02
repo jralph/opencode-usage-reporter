@@ -51,9 +51,8 @@ Options:
   --format <per-tool|combined|legacy>  Output schema (default: per-tool)
                            per-tool: rows split per CLI everywhere (cli_tool on
                                      every row). Lossless multi-CLI fidelity.
-                                     Existing dashboard renders but doesn't
-                                     collapse cross-CLI rows and doesn't yet
-                                     recognise the new cli_tool groupings.
+                                     Dashboard renders each CLI grouping
+                                     separately and can filter by source.
                            combined: dashboard-native keying (rows merged across
                                      CLIs by provider/model/tool) plus additive
                                      multi-tool fields (cli_tool_totals,
@@ -121,8 +120,10 @@ function collectFromAdapters(cutoff, useRealSessionName, selectedTools) {
     } catch (err) {
       console.error(`[${adapter.name}] adapter failed: ${err.message}`);
     }
-    perTool[adapter.name] = part.length;
-    for (const r of part) records.push(r);
+    for (const r of part) {
+      records.push(r);
+      perTool[r.tool || adapter.name] = (perTool[r.tool || adapter.name] || 0) + 1;
+    }
   }
   return { records, perTool, active: active.map(a => a.name) };
 }
@@ -133,6 +134,17 @@ function floorToHour(ts) {
   const d = new Date(ts);
   d.setMinutes(0, 0, 0);
   return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+function recordBillableTokens(r) {
+  return (r.inputTokens || 0)
+    + (r.outputTokens || 0)
+    + (r.cacheReadTokens || 0)
+    + (r.cacheCreationTokens || 0);
+}
+
+function isRequestRecord(r) {
+  return recordBillableTokens(r) > 0 || (Array.isArray(r.tools) && r.tools.length > 0);
 }
 
 // Aggregation keying depends on --format:
@@ -184,7 +196,7 @@ function buildModelTotals(records, format) {
     if (r.estimated) b.estimated_tokens += r.inputTokens + r.outputTokens;
     b.human_input_tokens += r.humanInputTokens;
     for (const t of r.tools) b.tool_input_tokens += t.inputTokens;
-    b.requests++;
+    if (isRequestRecord(r)) b.requests++;
   }
   return [...map.values()].sort((a, b) =>
     (b.input_tokens + b.output_tokens + b.cache_read_tokens + b.cache_creation_tokens)
@@ -217,7 +229,7 @@ function buildCliToolTotals(records) {
       b.tool_output_tokens += t.outputTokens;
       b.tool_calls++;
     }
-    b.requests++;
+    if (isRequestRecord(r)) b.requests++;
     b.sessions.add(r.sessionId);
     if (typeof r.created === 'number' && r.created > 0) {
       if (r.created < b.earliest_ms) b.earliest_ms = r.created;
@@ -280,14 +292,14 @@ function buildSessionDetails(records, useRealSessionName, format) {
       b.tool_output_tokens += t.outputTokens;
       b.tool_calls++;
     }
-    b.requests++;
+    if (isRequestRecord(r)) b.requests++;
     if (r.created < b.started_at) b.started_at = r.created;
     const end = r.completed || r.created;
     if (end > b.ended_at) b.ended_at = end;
 
     if (r.agent) {
       if (!b.agents[r.agent]) b.agents[r.agent] = { requests: 0, input_tokens: 0, output_tokens: 0, model: r.model };
-      b.agents[r.agent].requests++;
+      if (isRequestRecord(r)) b.agents[r.agent].requests++;
       b.agents[r.agent].input_tokens += r.inputTokens;
       b.agents[r.agent].output_tokens += r.outputTokens;
       if (r.model) b.agents[r.agent].model = r.model;
@@ -608,7 +620,7 @@ function buildHourlyReport(records, period, sources, useRealSessionName, format)
       tb.calls++;
       tb.input_tokens += t.inputTokens;
     }
-    b.requests++;
+    if (isRequestRecord(r)) b.requests++;
   }
 
   const usage = [...buckets.values()]

@@ -259,6 +259,7 @@ function collect({ cutoff, useRealSessionName }) {
       // --- User record ---
       const userText = typeof req.message?.text === 'string' ? req.message.text : '';
       const userMsgId = `cv-user:${reqId}`;
+      const userTextKey = `cv-text:${userMsgId}`;
 
       rawRequests.push({
         reqId: userMsgId,
@@ -269,14 +270,17 @@ function collect({ cutoff, useRealSessionName }) {
         role: 'user',
         model,
         agent,
-        tokenOverride: hasRealInput ? promptTokens : 0,
-        needsEstimate: !hasRealInput,
+        inputOverride: 0,
+        outputOverride: 0,
+        needsInputEstimate: false,
+        needsOutputEstimate: false,
+        humanTextKey: userText ? userTextKey : null,
         isAssistant: false,
         toolCalls: [],
       });
 
-      if (!hasRealInput && userText) {
-        workItems.push({ id: `cv-text:${userMsgId}`, texts: [userText] });
+      if (userText) {
+        workItems.push({ id: userTextKey, texts: [userText] });
       }
 
       // --- Assistant record ---
@@ -294,8 +298,11 @@ function collect({ cutoff, useRealSessionName }) {
         role: 'assistant',
         model,
         agent,
-        tokenOverride: hasRealOutput ? completionTokens : 0,
-        needsEstimate: !hasRealOutput,
+        inputOverride: hasRealInput ? promptTokens : 0,
+        outputOverride: hasRealOutput ? completionTokens : 0,
+        needsInputEstimate: !hasRealInput,
+        needsOutputEstimate: !hasRealOutput,
+        inputEstimateKey: userText ? userTextKey : null,
         isAssistant: true,
         toolCalls,
       });
@@ -329,28 +336,32 @@ function collect({ cutoff, useRealSessionName }) {
   for (const raw of rawRequests) {
     const {
       reqId, sessionId, sessionTitle, directory, ts, role, model, agent,
-      tokenOverride, needsEstimate, isAssistant, toolCalls,
+      inputOverride, outputOverride, needsInputEstimate, needsOutputEstimate,
+      inputEstimateKey, humanTextKey, isAssistant, toolCalls,
     } = raw;
 
     let inputTokens = 0;
     let outputTokens = 0;
+    let humanInputTokens = 0;
     let estimated = false;
 
     if (isAssistant) {
-      if (!needsEstimate) {
-        outputTokens = tokenOverride;
+      if (needsInputEstimate && inputEstimateKey) {
+        inputTokens = tokenMap.get(inputEstimateKey) || 0;
+        if (inputTokens > 0) estimated = true;
+      } else {
+        inputTokens = inputOverride || 0;
+      }
+
+      if (!needsOutputEstimate) {
+        outputTokens = outputOverride || 0;
       } else {
         outputTokens = tokenMap.get(`cv-text:${reqId}`) || 0;
-        estimated = true;
+        if (outputTokens > 0) estimated = true;
       }
     } else {
-      // user record
-      if (!needsEstimate) {
-        inputTokens = tokenOverride;
-      } else {
-        inputTokens = tokenMap.get(`cv-text:${reqId}`) || 0;
-        estimated = true;
-      }
+      humanInputTokens = humanTextKey ? (tokenMap.get(humanTextKey) || 0) : 0;
+      if (humanInputTokens > 0) estimated = true;
     }
 
     const tools = [];
@@ -379,7 +390,7 @@ function collect({ cutoff, useRealSessionName }) {
     }
 
     // Skip records that carry no useful signal.
-    if (inputTokens === 0 && outputTokens === 0 && tools.length === 0) continue;
+    if (inputTokens === 0 && outputTokens === 0 && humanInputTokens === 0 && tools.length === 0) continue;
 
     records.push(makeRecord({
       tool: TOOL_NAME,
@@ -394,7 +405,7 @@ function collect({ cutoff, useRealSessionName }) {
       model,
       inputTokens,
       outputTokens,
-      humanInputTokens: role === 'user' ? inputTokens : 0,
+      humanInputTokens,
       estimated,
       tools,
       toolEvents,

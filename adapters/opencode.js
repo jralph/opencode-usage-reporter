@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { tokenizeAll } = require('../lib/tokenize');
-const { safeStringify, readJSON, listDir, makeRecord } = require('../lib/util');
+const { safeStringify, readJSON, listDir, writableTmpDir, makeRecord } = require('../lib/util');
 
 const OPENCODE_DIR = path.join(process.env.HOME, '.local/share/opencode');
 const STORAGE = path.join(OPENCODE_DIR, 'storage');
@@ -21,14 +21,31 @@ const PART_DIR = path.join(STORAGE, 'part');
 const DB_PATH = path.join(OPENCODE_DIR, 'opencode.db');
 
 const TOOL_NAME = 'opencode';
+let sqliteAvailable = null;
+
+function hasSqlite() {
+  if (sqliteAvailable !== null) return sqliteAvailable;
+  try {
+    execSync('command -v sqlite3', { stdio: 'ignore', shell: '/bin/sh' });
+    sqliteAvailable = true;
+  } catch {
+    sqliteAvailable = false;
+  }
+  return sqliteAvailable;
+}
+
+function canUseDB() {
+  return fs.existsSync(DB_PATH) && hasSqlite();
+}
 
 function isAvailable() {
-  return fs.existsSync(DB_PATH) || fs.existsSync(SESSION_DIR);
+  return canUseDB() || fs.existsSync(SESSION_DIR);
 }
 
 function describeSources() {
   const parts = [];
-  if (fs.existsSync(DB_PATH)) parts.push('SQLite');
+  if (canUseDB()) parts.push('SQLite');
+  else if (fs.existsSync(DB_PATH)) parts.push('SQLite unavailable (sqlite3 missing)');
   if (fs.existsSync(SESSION_DIR)) parts.push('JSON files');
   return parts.join(' + ') || 'none';
 }
@@ -39,8 +56,8 @@ const FIELD_SEP = '|||F|||';
 const ROW_SEP = '|||R|||';
 
 function dbQueryRaw(sql) {
-  if (!fs.existsSync(DB_PATH)) return '';
-  const tmp = path.join(require('os').tmpdir(), `opencode-usage-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.out`);
+  if (!canUseDB()) return '';
+  const tmp = path.join(writableTmpDir(), `opencode-usage-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.out`);
   try {
     execSync(`sqlite3 "${DB_PATH}" ${JSON.stringify(sql)} > "${tmp}"`, { stdio: ['ignore', 'ignore', 'inherit'] });
     return fs.readFileSync(tmp, 'utf8');
@@ -53,8 +70,8 @@ function dbQueryRaw(sql) {
 }
 
 function dbQueryJSON(sql) {
-  if (!fs.existsSync(DB_PATH)) return [];
-  const tmp = path.join(require('os').tmpdir(), `opencode-usage-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
+  if (!canUseDB()) return [];
+  const tmp = path.join(writableTmpDir(), `opencode-usage-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
   try {
     execSync(`sqlite3 -json "${DB_PATH}" ${JSON.stringify(sql)} > "${tmp}"`, { stdio: ['ignore', 'ignore', 'inherit'] });
     const out = fs.readFileSync(tmp, 'utf8');
@@ -175,7 +192,7 @@ function getMessages(sessionID, cutoff, ctx) {
     seen.add(m.id);
     messages.push(m);
   }
-  if (!fs.existsSync(DB_PATH)) {
+  if (!canUseDB()) {
     for (const m of getMessagesFromFiles(sessionID)) {
       if (seen.has(m.id)) continue;
       const created = m.time?.created;
@@ -268,8 +285,12 @@ function gatherTokenWork(rawMessages, ctx) {
     const cacheCreationTokens = cache.write || 0;
     const hasRealUsage = inputTokens || outputTokens || cacheReadTokens || cacheCreationTokens;
 
+    const texts = parts.filter(p => p.text).map(p => p.text);
+    if (m.role === 'user' && texts.length > 0) {
+      estimateWork.push({ id: `oc-human:${m.id}`, texts });
+    }
+
     if (!hasRealUsage) {
-      const texts = parts.filter(p => p.text).map(p => p.text);
       if (texts.length > 0) {
         estimateWork.push({ id: `oc-est:${m.id}`, texts });
       }
@@ -346,18 +367,18 @@ function collect({ cutoff, useRealSessionName }) {
     let outputTokens = (tk.output || 0) + (tk.reasoning || 0);
     let cacheReadTokens = cache.read || 0;
     let cacheCreationTokens = cache.write || 0;
+    let humanInputTokens = m.role === 'user' ? (tokenMap.get(`oc-human:${m.id}`) || 0) : 0;
     let estimated = false;
 
     if (!inputTokens && !outputTokens && !cacheReadTokens && !cacheCreationTokens) {
       const est = tokenMap.get(`oc-est:${m.id}`) || 0;
-      if (est === 0) continue;
-      if (m.role === 'user') inputTokens = est;
-      else outputTokens = est;
+      if (m.role === 'assistant') outputTokens = est;
       estimated = true;
     }
 
     const tools = toolTokensByMsg.get(m.id) || [];
     const toolEvents = toolEventsByMsg.get(m.id) || [];
+    if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0 && cacheCreationTokens === 0 && humanInputTokens === 0 && tools.length === 0) continue;
 
     records.push(makeRecord({
       tool: TOOL_NAME,
@@ -374,7 +395,7 @@ function collect({ cutoff, useRealSessionName }) {
       outputTokens,
       cacheReadTokens,
       cacheCreationTokens,
-      humanInputTokens: m.role === 'user' ? inputTokens : 0,
+      humanInputTokens,
       estimated,
       tools,
       toolEvents,

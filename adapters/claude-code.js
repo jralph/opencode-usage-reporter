@@ -175,7 +175,7 @@ function collect({ cutoff, useRealSessionName }) {
           text,
         });
 
-        if (!usage && text) {
+        if (text) {
           workItems.push({ id: `cc-text:${msgId}`, texts: [text] });
         }
 
@@ -267,6 +267,7 @@ function collect({ cutoff, useRealSessionName }) {
     let outputTokens = 0;
     let cacheReadTokens = 0;
     let cacheCreationTokens = 0;
+    let humanInputTokens = 0;
     let estimated = false;
 
     if (usage) {
@@ -276,9 +277,9 @@ function collect({ cutoff, useRealSessionName }) {
       outputTokens = usage.output_tokens || 0;
     }
 
-    if (role === 'user' && !usage) {
-      inputTokens = tokenMap.get(`cc-text:${msgId}`) || 0;
-      estimated = true;
+    if (role === 'user') {
+      humanInputTokens = tokenMap.get(`cc-text:${msgId}`) || 0;
+      if (!usage) estimated = humanInputTokens > 0;
     }
 
     if (role === 'assistant' && needsOutputEstimate) {
@@ -309,7 +310,7 @@ function collect({ cutoff, useRealSessionName }) {
     }
 
     // Skip empty records.
-    if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0 && cacheCreationTokens === 0 && tools.length === 0) continue;
+    if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0 && cacheCreationTokens === 0 && humanInputTokens === 0 && tools.length === 0) continue;
 
     records.push(makeRecord({
       tool: TOOL_NAME,
@@ -326,7 +327,7 @@ function collect({ cutoff, useRealSessionName }) {
       outputTokens,
       cacheReadTokens,
       cacheCreationTokens,
-      humanInputTokens: role === 'user' ? inputTokens : 0,
+      humanInputTokens,
       estimated,
       tools,
       toolEvents,

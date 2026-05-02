@@ -8,47 +8,65 @@
 //   session_meta       — first line, captures session id, cwd, provider, model
 //   response_item      — messages (user/assistant) and tool calls/results
 //   turn_completed     — carries token usage for the preceding assistant turn
+//   event_msg          — current Codex writes token_count usage here
 //
-// Types ignored: event_msg, turn_started, item.started, item.completed.
+// Types ignored: turn_started, item.started, item.completed.
 //
 // Assistant records don't carry token counts inline; the subsequent
-// `turn_completed` event carries usage — that is applied to the most recent
-// assistant message in the same turn.  All user messages and assistant messages
-// without a matching turn_completed are tokenized locally and marked
-// `estimated: true`.
+// `turn_completed` event, or current `event_msg` token_count event, carries
+// usage — that is applied to the most recent assistant message in the same
+// turn. User messages are tokenized into humanInputTokens only; assistant
+// messages without matching usage fall back to local output estimation.
 
 const fs = require('fs');
 const path = require('path');
 const { tokenizeAll } = require('../lib/tokenize');
-const { safeStringify, readJSONL, listDir, makeRecord } = require('../lib/util');
+const { safeStringify, readJSONL, listDir, homeCandidates, makeRecord } = require('../lib/util');
 
-const CODEX_DIR = path.join(process.env.HOME, '.codex/sessions');
 const TOOL_NAME = 'codex';
+const TOOL_CLI = 'codex-cli';
+const TOOL_APP = 'codex-app';
 
 function isAvailable() {
-  return fs.existsSync(CODEX_DIR);
+  return candidateSessionDirs().some(dir => fs.existsSync(dir));
+}
+
+function candidateCodexHomes() {
+  const homes = [];
+  if (process.env.CODEX_HOME) homes.push(process.env.CODEX_HOME);
+  for (const home of homeCandidates()) homes.push(path.join(home, '.codex'));
+  return [...new Set(homes)];
+}
+
+function candidateSessionDirs() {
+  return candidateCodexHomes().map(home => path.join(home, 'sessions'));
 }
 
 // Walk YYYY/MM/DD subdirs under ~/.codex/sessions/ and return objects with
 // { filePath, mtime } for every rollout-*.jsonl found.
 function listSessionFiles() {
   const files = [];
-  for (const year of listDir(CODEX_DIR)) {
-    if (!/^\d{4}$/.test(year)) continue;
-    const yearDir = path.join(CODEX_DIR, year);
-    for (const month of listDir(yearDir)) {
-      if (!/^\d{2}$/.test(month)) continue;
-      const monthDir = path.join(yearDir, month);
-      for (const day of listDir(monthDir)) {
-        if (!/^\d{2}$/.test(day)) continue;
-        const dayDir = path.join(monthDir, day);
-        for (const file of listDir(dayDir)) {
-          if (!file.startsWith('rollout-') || !file.endsWith('.jsonl')) continue;
-          const filePath = path.join(dayDir, file);
-          try {
-            const stat = fs.statSync(filePath);
-            files.push({ filePath, mtime: stat.mtimeMs });
-          } catch {}
+  const seen = new Set();
+  for (const sessionsDir of candidateSessionDirs()) {
+    for (const year of listDir(sessionsDir)) {
+      if (!/^\d{4}$/.test(year)) continue;
+      const yearDir = path.join(sessionsDir, year);
+      for (const month of listDir(yearDir)) {
+        if (!/^\d{2}$/.test(month)) continue;
+        const monthDir = path.join(yearDir, month);
+        for (const day of listDir(monthDir)) {
+          if (!/^\d{2}$/.test(day)) continue;
+          const dayDir = path.join(monthDir, day);
+          for (const file of listDir(dayDir)) {
+            if (!file.startsWith('rollout-') || !file.endsWith('.jsonl')) continue;
+            const filePath = path.join(dayDir, file);
+            if (seen.has(filePath)) continue;
+            seen.add(filePath);
+            try {
+              const stat = fs.statSync(filePath);
+              files.push({ filePath, mtime: stat.mtimeMs });
+            } catch {}
+          }
         }
       }
     }
@@ -64,6 +82,45 @@ function extractMessageText(content) {
     if (typeof c.text === 'string' && c.text) parts.push(c.text);
   }
   return parts.join('\n');
+}
+
+function normaliseUsage(usage) {
+  const totalInput = usage.input_tokens || 0;
+  const cacheReadTokens = usage.cached_input_tokens || 0;
+  return {
+    inputTokens: Math.max(0, totalInput - cacheReadTokens),
+    cacheReadTokens,
+    outputTokens: (usage.output_tokens || 0) + (usage.reasoning_output_tokens || 0),
+  };
+}
+
+function parseJSONMaybe(value, fallback = {}) {
+  if (typeof value !== 'string') return value ?? fallback;
+  try { return JSON.parse(value || '{}'); } catch { return fallback; }
+}
+
+function callName(payload) {
+  if (payload.type === 'web_search_call') return 'web_search';
+  if (payload.type === 'tool_search_call') return 'tool_search';
+  return payload.name || payload.type || 'unknown';
+}
+
+function callArgs(payload) {
+  if (payload.type === 'function_call') return parseJSONMaybe(payload.arguments, {});
+  if (payload.type === 'custom_tool_call') return { input: payload.input || '' };
+  if (payload.type === 'web_search_call') return payload.action || {};
+  if (payload.type === 'tool_search_call') return payload.arguments || {};
+  return {};
+}
+
+function outputText(payload) {
+  if (typeof payload.output === 'string') return payload.output;
+  return safeStringify(payload.output ?? payload.tools ?? payload.result ?? payload);
+}
+
+function codexToolName(meta) {
+  if (meta.originator === 'Codex Desktop') return TOOL_APP;
+  return TOOL_CLI;
 }
 
 function collect({ cutoff, useRealSessionName }) {
@@ -94,16 +151,19 @@ function collect({ cutoff, useRealSessionName }) {
     const firstLine = lines[0];
     if (!firstLine || firstLine.type !== 'session_meta') continue;
 
-    const meta = firstLine.payload?.meta || {};
+    const metaPayload = firstLine.payload || {};
+    const meta = metaPayload.meta || metaPayload;
     const sessionId = meta.id || path.basename(filePath, '.jsonl').replace(/^rollout-[0-9T:-]+-?/, '');
     const provider = meta.model_provider || 'openai';
     const model = meta.model || 'unknown';
     const directory = meta.cwd || null;
     const sessionCreated = Date.parse(firstLine.timestamp) || mtime;
+    const toolName = codexToolName(meta);
 
     // Mutable per-session metadata bag shared by all raw message refs.
     const sessionMeta = {
       id: sessionId,
+      toolName,
       provider,
       model,
       directory,
@@ -114,9 +174,38 @@ function collect({ cutoff, useRealSessionName }) {
     sessionCount++;
 
     // Per-turn tracking.  A turn starts at a user message and ends at the
-    // next turn_completed event.
+    // next usage event.
     let turnAssistantMsgs = [];   // raw message objects (assistant) in current turn
     let turnCompositeCallIds = []; // composite call IDs for tool calls in current turn
+
+    const applyUsageToTurn = (usage, ts) => {
+      if (!usage || Object.keys(usage).length === 0) return;
+
+      if (turnAssistantMsgs.length > 0) {
+        const lastAsst = turnAssistantMsgs[turnAssistantMsgs.length - 1];
+        lastAsst.usageOverride = normaliseUsage(usage);
+        // Append rather than replace — some rollouts emit usage twice
+        // (failure + retry) without an intervening user message.
+        lastAsst.toolCallIds = [...lastAsst.toolCallIds, ...turnCompositeCallIds];
+      } else if (turnCompositeCallIds.length > 0) {
+        // Turn had tool calls but no surfaced assistant text message (e.g.
+        // tool-only turn). Synthesize a minimal assistant record so the
+        // activity and tokens are preserved in the report.
+        const synthId = `codex:${sessionCount}:synth:${rawMessages.length}`;
+        rawMessages.push({
+          msgId: synthId,
+          sessionId,
+          sessionMeta,
+          ts,
+          role: 'assistant',
+          usageOverride: normaliseUsage(usage),
+          toolCallIds: [...turnCompositeCallIds],
+        });
+      }
+
+      turnAssistantMsgs = [];
+      turnCompositeCallIds = [];
+    };
 
     for (let i = 1; i < lines.length; i++) {
       const ev = lines[i];
@@ -152,8 +241,8 @@ function collect({ cutoff, useRealSessionName }) {
             sessionMeta,
             ts,
             role,
-            usageOverride: null,      // filled by turn_completed
-            toolCallIds: [],           // composite call IDs, filled by turn_completed
+            usageOverride: null,      // filled by turn usage events
+            toolCallIds: [],           // composite call IDs, filled by turn usage events
           };
           rawMessages.push(record);
 
@@ -165,12 +254,11 @@ function collect({ cutoff, useRealSessionName }) {
             workItems.push({ id: `codex-text:${msgId}`, texts: [text] });
           }
 
-        } else if (itemType === 'function_call') {
+        } else if (['function_call', 'custom_tool_call', 'web_search_call', 'tool_search_call'].includes(itemType)) {
           const callId = payload.call_id || `call-${sessionId}-${i}`;
           const compositeId = `${sessionId}:${callId}`;
-          const toolName = payload.name || 'unknown';
-          let args = {};
-          try { args = JSON.parse(payload.arguments || '{}'); } catch {}
+          const toolName = callName(payload);
+          const args = callArgs(payload);
           const argText = safeStringify(args);
           toolCallData.set(compositeId, {
             tool: toolName,
@@ -183,62 +271,35 @@ function collect({ cutoff, useRealSessionName }) {
           turnCompositeCallIds.push(compositeId);
           workItems.push({ id: `codex-toolin:${compositeId}`, texts: [argText] });
 
-        } else if (itemType === 'function_call_output') {
+        } else if (['function_call_output', 'custom_tool_call_output', 'tool_search_output'].includes(itemType)) {
           const callId = payload.call_id || '';
           const compositeId = `${sessionId}:${callId}`;
-          const outputText = typeof payload.output === 'string'
-            ? payload.output
-            : safeStringify(payload.output);
+          const outText = outputText(payload);
           const entry = toolCallData.get(compositeId);
           if (entry) {
-            entry.outputText = outputText;
+            entry.outputText = outText;
             entry.outputTs = ts;
-            workItems.push({ id: `codex-toolout:${compositeId}`, texts: [outputText] });
+            workItems.push({ id: `codex-toolout:${compositeId}`, texts: [outText] });
           }
         }
 
+      } else if (evType === 'turn_context') {
+        if (typeof payload.model === 'string' && payload.model) {
+          sessionMeta.model = payload.model;
+        }
       } else if (evType === 'turn_completed') {
         // Codex writes usage at the top level of turn_completed events in
         // current rollout schema. A defensive fallback to payload.usage
         // handles potential schema variations without a breaking change.
         //
-        // OpenAI's usage reports `input_tokens` as fresh (uncached) input
-        // and `cached_input_tokens` as the portion served from prompt cache
-        // (discounted billing). We keep them separate so cost math can
-        // weight each bucket correctly.
+        // Codex/OpenAI usage reports cached_input_tokens as a subset of
+        // input_tokens. Store only fresh input in inputTokens and keep cached
+        // reads separate so report totals do not double-count prompt cache.
         const usage = ev.usage || payload.usage || {};
-        if (turnAssistantMsgs.length > 0) {
-          const lastAsst = turnAssistantMsgs[turnAssistantMsgs.length - 1];
-          lastAsst.usageOverride = {
-            inputTokens: usage.input_tokens || 0,
-            cacheReadTokens: usage.cached_input_tokens || 0,
-            outputTokens: (usage.output_tokens || 0) + (usage.reasoning_output_tokens || 0),
-          };
-          // Append rather than replace — some rollouts emit turn_completed
-          // twice (failure + retry) without an intervening user message.
-          lastAsst.toolCallIds = [...lastAsst.toolCallIds, ...turnCompositeCallIds];
-        } else if (turnCompositeCallIds.length > 0) {
-          // Turn had tool calls but no surfaced assistant text message (e.g.
-          // tool-only turn). Synthesize a minimal assistant record so the
-          // activity and tokens are preserved in the report.
-          const synthId = `codex:${sessionCount}:synth:${i}`;
-          rawMessages.push({
-            msgId: synthId,
-            sessionId: rawMessages.length && rawMessages[rawMessages.length - 1].sessionId,
-            sessionMeta: rawMessages.length && rawMessages[rawMessages.length - 1].sessionMeta,
-            ts,
-            role: 'assistant',
-            usageOverride: {
-              inputTokens: usage.input_tokens || 0,
-              cacheReadTokens: usage.cached_input_tokens || 0,
-              outputTokens: (usage.output_tokens || 0) + (usage.reasoning_output_tokens || 0),
-            },
-            toolCallIds: [...turnCompositeCallIds],
-          });
-        }
-        // Reset turn.
-        turnAssistantMsgs = [];
-        turnCompositeCallIds = [];
+        applyUsageToTurn(usage, ts);
+      } else if (evType === 'event_msg' && payload.type === 'token_count') {
+        const usage = payload.info?.last_token_usage || null;
+        applyUsageToTurn(usage, ts);
       }
     }
   }
@@ -255,12 +316,13 @@ function collect({ cutoff, useRealSessionName }) {
     let inputTokens = 0;
     let outputTokens = 0;
     let cacheReadTokens = 0;
+    let humanInputTokens = 0;
     let estimated = false;
 
     const textTokens = tokenMap.get(`codex-text:${msgId}`) || 0;
 
     if (role === 'user') {
-      inputTokens = textTokens;
+      humanInputTokens = textTokens;
       estimated = true;
     } else if (role === 'assistant') {
       if (usageOverride) {
@@ -294,10 +356,10 @@ function collect({ cutoff, useRealSessionName }) {
       });
     }
 
-    if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0 && tools.length === 0) continue;
+    if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0 && humanInputTokens === 0 && tools.length === 0) continue;
 
     records.push(makeRecord({
-      tool: TOOL_NAME,
+      tool: sm.toolName || TOOL_CLI,
       sessionId,
       sessionTitle: useRealSessionName
         ? (sm.firstUserText || sessionId.slice(0, 8))
@@ -317,7 +379,7 @@ function collect({ cutoff, useRealSessionName }) {
       // as fresh input_tokens in the same response, so there's no separate
       // cacheCreation field here.
       cacheCreationTokens: 0,
-      humanInputTokens: role === 'user' ? inputTokens : 0,
+      humanInputTokens,
       estimated,
       tools,
       toolEvents,
